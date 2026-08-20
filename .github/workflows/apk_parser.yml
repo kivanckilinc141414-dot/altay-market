@@ -37,34 +37,45 @@ jobs:
 
         apps_list = []
 
-        for file in sorted(os.listdir(".")):
-            if file.endswith(".apk"):
-                app_name = os.path.splitext(file)[0]
-                icon_filename = f"{app_name}.png"
-                icon_path = os.path.join("icons", icon_filename)
+        # Tum dizinleri ve alt klasorleri tara
+        for root, dirs, files in os.walk("."):
+            # .git ve .github klasorlerini atla
+            if ".git" in root or ".github" in root or "icons" in root:
+                continue
 
-                # APK içindeki görsellerden ikon ayıkla
-                try:
-                    with zipfile.ZipFile(file, 'r') as zip_ref:
-                        icon_bytes = None
-                        # Öncelikli ikon isimlerini tara
-                        for item in zip_ref.namelist():
-                            if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
-                                icon_bytes = zip_ref.read(item)
-                                break
-                        
-                        if icon_bytes:
-                            with open(icon_path, "wb") as f:
-                                f.write(icon_bytes)
-                except Exception as e:
-                    print(f"{file} okunurken hata oluştu: {e}")
+            for file in sorted(files):
+                if file.lower().endswith(".apk"):
+                    rel_dir = os.path.relpath(root, ".").replace("\\", "/")
+                    file_path = os.path.join(root, file) if rel_dir != "." else file
+                    raw_file_url = RAW_BASE_URL + (f"{rel_dir}/{file}" if rel_dir != "." else file)
 
-                apps_list.append({
-                    "name": app_name.replace("_", " ").replace("-", " ").title(),
-                    "fileName": file,
-                    "downloadUrl": RAW_BASE_URL + file,
-                    "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
-                })
+                    app_name = os.path.splitext(file)[0]
+                    icon_filename = f"{app_name}.png"
+                    icon_path = os.path.join("icons", icon_filename)
+
+                    # APK icinden ikon ayikla
+                    try:
+                        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                            icon_bytes = None
+                            for item in zip_ref.namelist():
+                                if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
+                                    icon_bytes = zip_ref.read(item)
+                                    break
+                            
+                            if icon_bytes:
+                                with open(icon_path, "wb") as f:
+                                    f.write(icon_bytes)
+                    except Exception as e:
+                        print(f"{file} okunurken hata: {e}")
+
+                    apps_list.append({
+                        "name": app_name.replace("_", " ").replace("-", " ").title(),
+                        "fileName": file,
+                        "downloadUrl": raw_file_url,
+                        "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
+                    })
+
+        print(f"Bulunan APK Sayisi: {len(apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(apps_list, f, ensure_ascii=False, indent=2)
