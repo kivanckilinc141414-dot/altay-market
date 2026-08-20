@@ -18,6 +18,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: AAPT Kurulumu (APK İnceleme Aracı)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y aapt
+
     - name: Python Kurulumu
       uses: actions/setup-python@v5
       with:
@@ -31,6 +36,8 @@ jobs:
         import json
         import zipfile
         import urllib.request
+        import subprocess
+        import re
 
         repo = os.environ.get("GITHUB_REPOSITORY")
         token = os.environ.get("GITHUB_TOKEN")
@@ -61,54 +68,75 @@ jobs:
                             download_url = asset["browser_download_url"]
                             temp_apk = "temp_download.apk"
 
-                            print(f"Indiriliyor: {file_name}...")
-                            
-                            # APK dosyasini gecici olarak indir
+                            print(f"İndiriliyor ve İnceleniyor: {file_name}...")
                             dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
                             with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
                                 out_file.write(dl_res.read())
 
                             app_name = os.path.splitext(file_name)[0]
-                            icon_filename = f"{app_name}.png"
-                            icon_path = os.path.join("icons", icon_filename)
+                            icon_in_apk = None
 
-                            # APK icinden ikonu cikart
+                            # 1. AAPT ile APK'nın içindeki orijinal uygulama adını ve ikon yolunu çek
+                            try:
+                                cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
+                                out = cmd_res.stdout
+
+                                # Gerçek Ekran İsmini Al (application-label)
+                                label_match = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", out) or re.search(r"application:\s*label='([^']+)'", out)
+                                if label_match:
+                                    app_name = label_match.group(1)
+
+                                # Gerçek İkon Yolunu Al
+                                icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
+                                if icons:
+                                    icon_in_apk = icons[-1] # En yüksek çözünürlüklü ikonu seçer
+                            except Exception as e:
+                                print(f"AAPT Okuma Hatası: {e}")
+
+                            # 2. İkonu Çıkart ve icons/ Klasörüne Kaydet
+                            icon_filename = f"{os.path.splitext(file_name)[0]}.png"
+                            icon_path = os.path.join("icons", icon_filename)
+                            extracted = False
+
                             try:
                                 with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
-                                    icon_bytes = None
-                                    for item in zip_ref.namelist():
-                                        if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
-                                            icon_bytes = zip_ref.read(item)
-                                            break
-                                    
-                                    if icon_bytes:
+                                    if icon_in_apk and icon_in_apk in zip_ref.namelist():
                                         with open(icon_path, "wb") as f:
-                                            f.write(icon_bytes)
+                                            f.write(zip_ref.read(icon_in_apk))
+                                        extracted = True
+                                    else:
+                                        # Alternatif ikon taraması (.png ve .webp)
+                                        for item in zip_ref.namelist():
+                                            if ('ic_launcher' in item or 'app_icon' in item) and (item.endswith('.png') or item.endswith('.webp')):
+                                                with open(icon_path, "wb") as f:
+                                                    f.write(zip_ref.read(item))
+                                                extracted = True
+                                                break
                             except Exception as e:
-                                print(f"{file_name} okunurken hata: {e}")
-                            finally:
-                                if os.path.exists(temp_apk):
-                                    os.remove(temp_apk)
+                                print(f"İkon Çıkarma Hatası: {e}")
+
+                            if os.path.exists(temp_apk):
+                                os.remove(temp_apk)
 
                             apps_list.append({
-                                "name": app_name.replace("_", " ").replace("-", " ").title(),
+                                "name": app_name,
                                 "fileName": file_name,
                                 "downloadUrl": download_url,
-                                "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
+                                "icon": f"icons/{icon_filename}" if extracted else ""
                             })
 
         except Exception as e:
-            print(f"API Hatasi: {e}")
+            print(f"API Hatası: {e}")
 
-        print(f"Toplam Bulunan Release APK Sayisi: {len(apps_list)}")
+        print(f"Toplam İşlenen APK Sayısı: {len(apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(apps_list, f, ensure_ascii=False, indent=2)
       shell: python
 
-    - name: Degisiklikleri GitHub Repo'suna Commit Et
+    - name: Değişiklikleri GitHub Repo'suna Commit Et
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: Releases APK ikonları ve apps.json güncellendi" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: APK imzalı isimleri ve ikonları güncellendi" && git push)
