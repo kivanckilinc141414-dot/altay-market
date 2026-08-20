@@ -1,11 +1,10 @@
 name: Auto Generate Apps and Icons
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - '**.apk'
 
 permissions:
   contents: write
@@ -44,13 +43,13 @@ jobs:
                 icon_filename = f"{app_name}.png"
                 icon_path = os.path.join("icons", icon_filename)
 
-                # APK içinden varsayılan ikonu ayıkla
+                # APK içindeki görsellerden ikon ayıkla
                 try:
                     with zipfile.ZipFile(file, 'r') as zip_ref:
                         icon_bytes = None
-                        # En yaygın ikon yollarını tara
+                        # Öncelikli ikon isimlerini tara
                         for item in zip_ref.namelist():
-                            if 'ic_launcher.png' in item or 'app_icon.png' in item:
+                            if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
                                 icon_bytes = zip_ref.read(item)
                                 break
                         
@@ -58,7 +57,7 @@ jobs:
                             with open(icon_path, "wb") as f:
                                 f.write(icon_bytes)
                 except Exception as e:
-                    print(f"{file} okunurken hata: {e}")
+                    print(f"{file} okunurken hata oluştu: {e}")
 
                 apps_list.append({
                     "name": app_name.replace("_", " ").replace("-", " ").title(),
