@@ -9,19 +9,19 @@
     "name": "Google Go",
     "fileName": "Google_Go.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google_Go.apk",
-    "icon": ""
+    "icon": "icons/Google_Go.png"
   },
   {
     "name": "Internet Altay Chess",
     "fileName": "internetaltaychess.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/internetaltaychess.apk",
-    "icon": "icons/internetaltaychess.png"
+    "icon": ""
   },
   {
     "name": "MINEFAKE",
     "fileName": "minefake.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/minefake.apk",
-    "icon": "icons/minefake.png"
+    "icon": ""
   },
   {
     "name": "Uptodown App Store",
