@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "name": "Android Market",
+    "fileName": "Android_Market.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Android_Market.apk",
+    "icon": "icons/Android_Market.png"
+  },
+  {
+    "name": "Google Go",
+    "fileName": "Google_Go.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google_Go.apk",
+    "icon": ""
+  },
+  {
+    "name": "Internetaltaychess",
+    "fileName": "internetaltaychess.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/internetaltaychess.apk",
+    "icon": ""
+  },
+  {
+    "name": "Minefake",
+    "fileName": "minefake.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/minefake.apk",
+    "icon": ""
+  },
+  {
+    "name": "Uptodown",
+    "fileName": "uptodown.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
+    "icon": ""
+  }
+]
