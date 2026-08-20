@@ -19,6 +19,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Depodaki Tum Dosyalari Listele (Debug)
+      run: |
+        echo "=== REPODAKI DOSYALAR ==="
+        find . -maxdepth 3 -not -path '*/.*'
+
     - name: Python Kurulumu
       uses: actions/setup-python@v5
       with:
@@ -37,9 +42,7 @@ jobs:
 
         apps_list = []
 
-        # Tum dizinleri ve alt klasorleri tara
         for root, dirs, files in os.walk("."):
-            # .git ve .github klasorlerini atla
             if ".git" in root or ".github" in root or "icons" in root:
                 continue
 
@@ -53,7 +56,6 @@ jobs:
                     icon_filename = f"{app_name}.png"
                     icon_path = os.path.join("icons", icon_filename)
 
-                    # APK icinden ikon ayikla
                     try:
                         with zipfile.ZipFile(file_path, 'r') as zip_ref:
                             icon_bytes = None
