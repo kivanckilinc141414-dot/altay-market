@@ -31,7 +31,7 @@ jobs:
     - name: Gerekli Python Paketlerini Yükle
       run: |
         python -m pip install --upgrade pip
-        pip install Pillow pyaxmlparser requests
+        pip install Pillow requests
 
     - name: Releases APK Icon ve apps.json Üretici
       env:
@@ -45,7 +45,6 @@ jobs:
         import re
         import requests
         from PIL import Image
-        from pyaxmlparser import APK
 
         repo = os.environ.get("GITHUB_REPOSITORY")
         token = os.environ.get("GITHUB_TOKEN")
@@ -76,79 +75,93 @@ jobs:
                             download_url = asset["browser_download_url"]
                             temp_apk = "temp_download.apk"
 
-                            print(f"İndiriliyor: {file_name}...")
+                            print(f"\n--- İşleniyor: {file_name} ---")
                             dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
                             with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
                                 out_file.write(dl_res.read())
 
                             app_name = os.path.splitext(file_name)[0]
                             package_name = None
+                            aapt_icon_path = None
 
-                            # 1. PyAXMLParser ile APK Paket Bilgisini Çek
+                            # 1. AAPT ile Paket Adı, İsim ve İkon Yolunu Al
                             try:
-                                apk_obj = APK(temp_apk)
-                                package_name = apk_obj.package
-                                if apk_obj.application:
-                                    app_name = apk_obj.application
+                                cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
+                                out = cmd_res.stdout
+
+                                pkg_match = re.search(r"package:\s*name='([^']+)'", out)
+                                if pkg_match:
+                                    package_name = pkg_match.group(1)
+
+                                label_match = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", out) or re.search(r"application:\s*label='([^']+)'", out)
+                                if label_match:
+                                    app_name = label_match.group(1)
+
+                                icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
+                                if icons:
+                                    aapt_icon_path = icons[-1]
                             except Exception as e:
-                                print(f"APK Parser Hatasi: {e}")
+                                print(f"AAPT Okuma Hatasi: {e}")
 
                             icon_filename = f"{os.path.splitext(file_name)[0]}.png"
                             icon_path = os.path.join("icons", icon_filename)
                             temp_raw_icon = "temp_raw_icon"
                             extracted = False
 
-                            # 2. APK İçindeki Gerçek Resim İkonlarını Ara
-                            try:
-                                with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
-                                    all_files = zip_ref.namelist()
-                                    
-                                    # Sadece PNG/WEBP/JPG ve res/ mipmap/drawable icindeki GERÇEK resimleri filtrele
-                                    image_candidates = [
-                                        f for f in all_files 
-                                        if f.lower().endswith(('.png', '.webp', '.jpg')) 
-                                        and not f.endswith('.xml')
-                                        and ('ic_launcher' in f or 'app_icon' in f or 'store' in f or 'logo' in f)
-                                        and 'sym_def' not in f # Varsayılan android simgesini engelle
-                                    ]
-
-                                    # En büyük boyutlu (en yüksek çözünürlüklü) ikonu seç
-                                    if image_candidates:
-                                        image_candidates.sort(key=lambda x: zip_ref.getinfo(x).file_size, reverse=True)
-                                        best_icon = image_candidates[0]
-                                        
-                                        with open(temp_raw_icon, "wb") as f:
-                                            f.write(zip_ref.read(best_icon))
-                                        
-                                        with Image.open(temp_raw_icon) as img:
-                                            # Eğer görsel 48x48 veya aşırı küçükse/yeşil varsayılan simgeyse atla
-                                            if img.width >= 72:
-                                                img.convert("RGBA").save(icon_path, "PNG")
-                                                extracted = True
-                                                print(f"  APK içinden ikon çıkarıldı: {best_icon}")
-                            except Exception as e:
-                                print(f"İç İkon Çıkarma Hatası: {e}")
-
-                            # 3. APK İçinde Resim İkon Yoksa veya Sadece Yeşil Varsayılan Varsa Paket Adından İkonu Çek
-                            if not extracted and package_name:
-                                print(f"  APK içinde uygun PNG bulunamadı. Paket adından ({package_name}) web ikonu aranıyor...")
+                            # 2. İkon Stratejisi
+                            # Durum A: AAPT Doğrudan PNG/JPG Veriyorsa (XML Değilse) -> APK İçinden Çıkar
+                            if aapt_icon_path and not aapt_icon_path.endswith('.xml'):
                                 try:
-                                    # DuckDuckGo / Play Store ikon servisi
-                                    icon_web_url = f"https://play-lh.googleusercontent.com/" # Fallback
-                                    # Google Play Store Web Scrape
-                                    store_url = f"https://play.google.com/store/apps/details?id={package_name}"
-                                    res = requests.get(store_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
-                                    if res.status_code == 200:
-                                        match = re.search(r'https://play-lh\.googleusercontent\.com/[^"\'\s]+', res.text)
-                                        if match:
-                                            img_url = match.group(0)
-                                            img_data = requests.get(img_url).content
-                                            with open(icon_path, "wb") as f:
-                                                f.write(img_data)
+                                    with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
+                                        if aapt_icon_path in zip_ref.namelist():
+                                            with open(temp_raw_icon, "wb") as f:
+                                                f.write(zip_ref.read(aapt_icon_path))
+                                            with Image.open(temp_raw_icon) as img:
+                                                img.convert("RGBA").save(icon_path, "PNG")
                                             extracted = True
-                                            print(f"  Web Play Store'dan Orijinal HD İkon Çekildi: {package_name}")
+                                            print(f"  [APK İçi] Orijinal PNG Çıkarıldı: {aapt_icon_path}")
                                 except Exception as e:
-                                    print(f"  Web İkon İndirme Hatası: {e}")
+                                    print(f"  APK İçi İkon Çıkarma Hatası: {e}")
+
+                            # Durum B: İkon XML (Adaptive) ise veya AAPT PNG Vermediyse -> Play Store / Web Kaynağından Çek
+                            if not extracted and package_name:
+                                print(f"  İkon XML (Adaptive) veya doğrudan PNG değil. Web'den ({package_name}) HD ikon aranıyor...")
+                                try:
+                                    store_url = f"https://play.google.com/store/apps/details?id={package_name}"
+                                    res = requests.get(store_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=6)
+                                    if res.status_code == 200:
+                                        img_match = re.search(r'(https://play-lh\.googleusercontent\.com/[^"\'\s=]+)', res.text)
+                                        if img_match:
+                                            hd_icon_url = img_match.group(1) + "=w512-h512"
+                                            img_bytes = requests.get(hd_icon_url, timeout=6).content
+                                            with open(icon_path, "wb") as f:
+                                                f.write(img_bytes)
+                                            extracted = True
+                                            print(f"  [Play Store] HD Orijinal İkon İndirildi.")
+                                except Exception as e:
+                                    print(f"  Web İkon Çekme Hatası: {e}")
+
+                            # Durum C: Web'de Bulunamadıysa Son Çare APK İçi PNG Taraması Yap
+                            if not extracted:
+                                try:
+                                    with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
+                                        valid_files = [
+                                            f for f in zip_ref.namelist()
+                                            if f.lower().endswith(('.png', '.webp', '.jpg')) 
+                                            and not f.endswith('.xml')
+                                            and ('ic_launcher' in f or 'app_icon' in f)
+                                        ]
+                                        if valid_files:
+                                            valid_files.sort(key=lambda x: zip_ref.getinfo(x).file_size, reverse=True)
+                                            best_icon = valid_files[0]
+                                            with open(temp_raw_icon, "wb") as f:
+                                                f.write(zip_ref.read(best_icon))
+                                            with Image.open(temp_raw_icon) as img:
+                                                img.convert("RGBA").save(icon_path, "PNG")
+                                            extracted = True
+                                            print(f"  [Yedek Tarama] İkon Çıkarıldı: {best_icon}")
+                                except Exception as e:
+                                    print(f"  Yedek İkon Çıkarma Hatası: {e}")
 
                             # Temizlik
                             if os.path.exists(temp_apk): os.remove(temp_apk)
@@ -164,7 +177,7 @@ jobs:
         except Exception as e:
             print(f"API Hatasi: {e}")
 
-        print(f"Toplam Islenen APK Sayisi: {len(apps_list)}")
+        print(f"\nToplam İşlenen APK Sayısı: {len(apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(apps_list, f, ensure_ascii=False, indent=2)
@@ -175,4 +188,4 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar gerçek HD PNG/PlayStore kaynağıyla güncellendi" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar Adaptive XML mantığıyla HD olarak güncellendi" && git push)
