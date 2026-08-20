@@ -1,104 +1,79 @@
-name: APK Auto Parser
+name: Auto Generate Apps and Icons
 
 on:
-  release:
-    types: [published, edited]
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.apk'
+
+permissions:
+  contents: write
 
 jobs:
-  parse-apks:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+
     steps:
-      - name: Repoyu Çek
-        uses: actions/checkout@v4
+    - name: Repo Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Python Kur
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+    - name: Python Kurulumu
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
 
-      - name: Gerekli Kütüphaneleri Yükle
-        run: |
-          pip install pyaxmlparser requests
+    - name: APK Icon ve apps.json Üretici
+      run: |
+        import os
+        import json
+        import zipfile
 
-      - name: APK'ları İndir, Ayrıştır ve JSON Üret
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python -c "
-          import os, json, requests
-          from pyaxmlparser import APK
+        RAW_BASE_URL = f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY')}/main/"
+        
+        if not os.path.exists("icons"):
+            os.makedirs("icons")
 
-          repo = os.environ.get('GITHUB_REPOSITORY')
-          token = os.environ.get('GH_TOKEN')
-          headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
+        apps_list = []
 
-          # Tüm Release'leri çek
-          rel_url = f'https://api.github.com/repos/{repo}/releases'
-          res = requests.get(rel_url, headers=headers).json()
+        for file in sorted(os.listdir(".")):
+            if file.endswith(".apk"):
+                app_name = os.path.splitext(file)[0]
+                icon_filename = f"{app_name}.png"
+                icon_path = os.path.join("icons", icon_filename)
 
-          assets = []
-          if isinstance(res, list):
-              for rel in res:
-                  assets.extend(rel.get('assets', []))
-          elif isinstance(res, dict) and 'assets' in res:
-              assets = res.get('assets', [])
+                # APK içinden varsayılan ikonu ayıkla
+                try:
+                    with zipfile.ZipFile(file, 'r') as zip_ref:
+                        icon_bytes = None
+                        # En yaygın ikon yollarını tara
+                        for item in zip_ref.namelist():
+                            if 'ic_launcher.png' in item or 'app_icon.png' in item:
+                                icon_bytes = zip_ref.read(item)
+                                break
+                        
+                        if icon_bytes:
+                            with open(icon_path, "wb") as f:
+                                f.write(icon_bytes)
+                except Exception as e:
+                    print(f"{file} okunurken hata: {e}")
 
-          apk_assets = [a for a in assets if a['name'].lower().endswith('.apk')]
+                apps_list.append({
+                    "name": app_name.replace("_", " ").replace("-", " ").title(),
+                    "fileName": file,
+                    "downloadUrl": RAW_BASE_URL + file,
+                    "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
+                })
 
-          os.makedirs('icons', exist_ok=True)
-          apps_data = []
+        with open("apps.json", "w", encoding="utf-8") as f:
+            json.dump(apps_list, f, ensure_ascii=False, indent=2)
+      shell: python
 
-          for asset in apk_assets:
-              apk_name = asset['name']
-              download_url = asset['browser_download_url']
-              local_apk = f'/tmp/{apk_name}'
-
-              r = requests.get(download_url, stream=True)
-              with open(local_apk, 'wb') as f:
-                  for chunk in r.iter_content(chunk_size=8192):
-                      f.write(chunk)
-
-              try:
-                  app = APK(local_apk)
-                  app_name = app.get_app_name() or apk_name.replace('.apk', '')
-                  pkg_name = app.package or 'app'
-
-                  icon_data = None
-                  try:
-                      icon_path = app.get_icon()
-                      if icon_path:
-                          icon_data = app.get_file(icon_path)
-                  except Exception:
-                      pass
-
-                  icon_filename = f'icons/{pkg_name}.png'
-                  if icon_data:
-                      with open(icon_filename, 'wb') as f:
-                          f.write(icon_data)
-                      icon_url = icon_filename
-                  else:
-                      icon_url = 'https://via.placeholder.com/76'
-
-                  apps_data.append({
-                      'name': app_name,
-                      'fileName': apk_name,
-                      'downloadUrl': download_url,
-                      'icon': icon_url
-                  })
-                  print(f'Başarıyla ayrıştırıldı: {app_name}')
-              except Exception as e:
-                  print(f'Hata ({apk_name}): {e}')
-
-          with open('apps.json', 'w', encoding='utf-8') as f:
-              json.dump(apps_data, f, ensure_ascii=False, indent=2)
-          "
-
-      - name: Oluşan Dosyaları Repoya Kaydet (Commit & Push)
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add apps.json icons/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update apps.json and extracted icons" && git push)
+    - name: Degisiklikleri GitHub Repo'suna Commit Et
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add apps.json icons/
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: APK ikonları ve apps.json güncellendi" && git push)
