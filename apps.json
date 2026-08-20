@@ -9,7 +9,7 @@
     "name": "Google Go",
     "fileName": "Google_Go.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google_Go.apk",
-    "icon": "icons/Google_Go.png"
+    "icon": ""
   },
   {
     "name": "Internet Altay Chess",
@@ -27,6 +27,6 @@
     "name": "Uptodown App Store",
     "fileName": "uptodown.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
-    "icon": "icons/uptodown.png"
+    "icon": ""
   }
 ]
