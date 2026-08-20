@@ -1,10 +1,9 @@
-name: Auto Generate Apps and Icons
+name: Auto Generate Apps and Icons from Releases
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  release:
+    types: [published, edited]
 
 permissions:
   contents: write
@@ -19,65 +18,89 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Depodaki Tum Dosyalari Listele (Debug)
-      run: |
-        echo "=== REPODAKI DOSYALAR ==="
-        find . -maxdepth 3 -not -path '*/.*'
-
     - name: Python Kurulumu
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
-    - name: APK Icon ve apps.json Üretici
+    - name: Releases APK Icon ve apps.json Üretici
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         import os
         import json
         import zipfile
+        import urllib.request
 
-        RAW_BASE_URL = f"https://raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY')}/main/"
-        
+        repo = os.environ.get("GITHUB_REPOSITORY")
+        token = os.environ.get("GITHUB_TOKEN")
+
+        headers = {
+            "User-Agent": "GitHub-Action",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        if token:
+            headers["Authorization"] = f"token {token}"
+
+        url = f"https://api.github.com/repos/{repo}/releases"
+        req = urllib.request.Request(url, headers=headers)
+
         if not os.path.exists("icons"):
             os.makedirs("icons")
 
         apps_list = []
 
-        for root, dirs, files in os.walk("."):
-            if ".git" in root or ".github" in root or "icons" in root:
-                continue
+        try:
+            with urllib.request.urlopen(req) as response:
+                releases = json.loads(response.read().decode())
+                
+                for release in releases:
+                    for asset in release.get("assets", []):
+                        file_name = asset["name"]
+                        if file_name.lower().endswith(".apk"):
+                            download_url = asset["browser_download_url"]
+                            temp_apk = "temp_download.apk"
 
-            for file in sorted(files):
-                if file.lower().endswith(".apk"):
-                    rel_dir = os.path.relpath(root, ".").replace("\\", "/")
-                    file_path = os.path.join(root, file) if rel_dir != "." else file
-                    raw_file_url = RAW_BASE_URL + (f"{rel_dir}/{file}" if rel_dir != "." else file)
-
-                    app_name = os.path.splitext(file)[0]
-                    icon_filename = f"{app_name}.png"
-                    icon_path = os.path.join("icons", icon_filename)
-
-                    try:
-                        with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                            icon_bytes = None
-                            for item in zip_ref.namelist():
-                                if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
-                                    icon_bytes = zip_ref.read(item)
-                                    break
+                            print(f"Indiriliyor: {file_name}...")
                             
-                            if icon_bytes:
-                                with open(icon_path, "wb") as f:
-                                    f.write(icon_bytes)
-                    except Exception as e:
-                        print(f"{file} okunurken hata: {e}")
+                            # APK dosyasini gecici olarak indir
+                            dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
+                            with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
+                                out_file.write(dl_res.read())
 
-                    apps_list.append({
-                        "name": app_name.replace("_", " ").replace("-", " ").title(),
-                        "fileName": file,
-                        "downloadUrl": raw_file_url,
-                        "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
-                    })
+                            app_name = os.path.splitext(file_name)[0]
+                            icon_filename = f"{app_name}.png"
+                            icon_path = os.path.join("icons", icon_filename)
 
-        print(f"Bulunan APK Sayisi: {len(apps_list)}")
+                            # APK icinden ikonu cikart
+                            try:
+                                with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
+                                    icon_bytes = None
+                                    for item in zip_ref.namelist():
+                                        if 'ic_launcher.png' in item or 'app_icon.png' in item or 'icon.png' in item:
+                                            icon_bytes = zip_ref.read(item)
+                                            break
+                                    
+                                    if icon_bytes:
+                                        with open(icon_path, "wb") as f:
+                                            f.write(icon_bytes)
+                            except Exception as e:
+                                print(f"{file_name} okunurken hata: {e}")
+                            finally:
+                                if os.path.exists(temp_apk):
+                                    os.remove(temp_apk)
+
+                            apps_list.append({
+                                "name": app_name.replace("_", " ").replace("-", " ").title(),
+                                "fileName": file_name,
+                                "downloadUrl": download_url,
+                                "icon": f"icons/{icon_filename}" if os.path.exists(icon_path) else ""
+                            })
+
+        except Exception as e:
+            print(f"API Hatasi: {e}")
+
+        print(f"Toplam Bulunan Release APK Sayisi: {len(apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(apps_list, f, ensure_ascii=False, indent=2)
@@ -88,4 +111,4 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: APK ikonları ve apps.json güncellendi" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: Releases APK ikonları ve apps.json güncellendi" && git push)
