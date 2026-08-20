@@ -15,13 +15,13 @@
     "name": "Internet Altay Chess",
     "fileName": "internetaltaychess.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/internetaltaychess.apk",
-    "icon": ""
+    "icon": "icons/internetaltaychess.png"
   },
   {
     "name": "MINEFAKE",
     "fileName": "minefake.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/minefake.apk",
-    "icon": ""
+    "icon": "icons/minefake.png"
   },
   {
     "name": "Uptodown App Store",
