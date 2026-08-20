@@ -258,8 +258,8 @@
 
         async function fetchApps() {
             try {
-                // Otomasyonun otomatik oluşturduğu JSON verisini çeker
-                const response = await fetch('apps.json');
+                // Ön bellek sorununu önlemek için zaman damgası ve no-store eklendi
+                const response = await fetch('apps.json?v=' + Date.now(), { cache: 'no-store' });
                 if (!response.ok) throw new Error("JSON file not found");
 
                 const data = await response.json();
