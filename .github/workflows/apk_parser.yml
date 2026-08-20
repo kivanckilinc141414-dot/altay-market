@@ -35,10 +35,17 @@ jobs:
           token = os.environ.get('GH_TOKEN')
           headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
 
-          rel_url = f'https://api.github.com/repos/{repo}/releases/latest'
+          # Tüm Release'leri çek
+          rel_url = f'https://api.github.com/repos/{repo}/releases'
           res = requests.get(rel_url, headers=headers).json()
 
-          assets = res.get('assets', [])
+          assets = []
+          if isinstance(res, list):
+              for rel in res:
+                  assets.extend(rel.get('assets', []))
+          elif isinstance(res, dict) and 'assets' in res:
+              assets = res.get('assets', [])
+
           apk_assets = [a for a in assets if a['name'].lower().endswith('.apk')]
 
           os.makedirs('icons', exist_ok=True)
@@ -59,7 +66,14 @@ jobs:
                   app_name = app.get_app_name() or apk_name.replace('.apk', '')
                   pkg_name = app.package or 'app'
 
-                  icon_data = app.get_file(app.get_icon())
+                  icon_data = None
+                  try:
+                      icon_path = app.get_icon()
+                      if icon_path:
+                          icon_data = app.get_file(icon_path)
+                  except Exception:
+                      pass
+
                   icon_filename = f'icons/{pkg_name}.png'
                   if icon_data:
                       with open(icon_filename, 'wb') as f:
