@@ -3,13 +3,13 @@ name: APK Auto Parser
 on:
   release:
     types: [published, edited]
-  workflow_dispatch: # Elle tetikleme butonu ekler
+  workflow_dispatch:
 
 jobs:
   parse-apks:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Repoya dosya kaydetme izni
+      contents: write
     steps:
       - name: Repoyu Çek
         uses: actions/checkout@v4
@@ -35,12 +35,11 @@ jobs:
           token = os.environ.get('GH_TOKEN')
           headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
 
-          # Son Release verilerini al
           rel_url = f'https://api.github.com/repos/{repo}/releases/latest'
           res = requests.get(rel_url, headers=headers).json()
 
           assets = res.get('assets', [])
-          apk_assets = [a for a in assets if a['name'].lower().endsWith('.apk')]
+          apk_assets = [a for a in assets if a['name'].lower().endswith('.apk')]
 
           os.makedirs('icons', exist_ok=True)
           apps_data = []
@@ -50,7 +49,6 @@ jobs:
               download_url = asset['browser_download_url']
               local_apk = f'/tmp/{apk_name}'
 
-              # APK'yı gecici dizine indir
               r = requests.get(download_url, stream=True)
               with open(local_apk, 'wb') as f:
                   for chunk in r.iter_content(chunk_size=8192):
@@ -58,11 +56,9 @@ jobs:
 
               try:
                   app = APK(local_apk)
-                  # APK içindeki orijinal Türkçe/İmzalı ismi çek
                   app_name = app.get_app_name() or apk_name.replace('.apk', '')
                   pkg_name = app.package or 'app'
 
-                  # Orijinal Logoyu Çıkar ve icons/ klasörüne kaydet
                   icon_data = app.get_file(app.get_icon())
                   icon_filename = f'icons/{pkg_name}.png'
                   if icon_data:
@@ -82,7 +78,6 @@ jobs:
               except Exception as e:
                   print(f'Hata ({apk_name}): {e}')
 
-          # apps.json dosyasını yaz
           with open('apps.json', 'w', encoding='utf-8') as f:
               json.dump(apps_data, f, ensure_ascii=False, indent=2)
           "
@@ -92,5 +87,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add apps.json icons/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update apps.json and extracted icon
-          s" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update apps.json and extracted icons" && git push)
