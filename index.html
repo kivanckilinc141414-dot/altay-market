@@ -257,24 +257,42 @@
         const listContainer = document.getElementById('app-list-container');
 
         async function fetchApps() {
+            const rawUrl = 'https://raw.githubusercontent.com/kivanckilinc141414-dot/altay-market/main/apps.json';
+            let data = null;
+
+            // 1. Önce yerel apps.json dosyasını dene
             try {
-                // Ön bellek sorununu önlemek için zaman damgası ve no-store eklendi
-                const response = await fetch('apps.json?v=' + Date.now(), { cache: 'no-store' });
-                if (!response.ok) throw new Error("JSON file not found");
-
-                const data = await response.json();
-                
-                allApps = data.map(app => ({
-                    displayName: app.name || 'Unnamed Application',
-                    fileName: app.fileName,
-                    downloadUrl: app.downloadUrl,
-                    icon: app.icon || 'https://via.placeholder.com/76?text=APK'
-                }));
-
-                renderApps(allApps);
-            } catch (e) {
-                listContainer.innerHTML = "<p style='text-align:center; color:#aaa; margin-top:40px;'>Henüz taranmış uygulama bulunamadı.<br>Lütfen GitHub üzerinden bir Release yükleyip otomasyonun tamamlanmasını bekleyin.</p>";
+                let response = await fetch('apps.json?v=' + Date.now(), { cache: 'no-store' });
+                if (response.ok) {
+                    data = await response.json();
+                }
+            } catch (err) {
+                // file:// protokolünde veya yerel sunucu yoksa buraya düşer
             }
+
+            // 2. Yerel dosya okunamadıysa (ör. telefonda file:// ile açıldıysa) GitHub Raw'dan çek
+            if (!data) {
+                try {
+                    let response = await fetch(rawUrl + '?v=' + Date.now(), { cache: 'no-store' });
+                    if (!response.ok) throw new Error("HTTP " + response.status);
+                    data = await response.json();
+                } catch (err) {
+                    listContainer.innerHTML = `<p style='text-align:center; color:#ff8a8a; margin-top:40px;'>
+                        <b>Yükleme Hatası:</b> ${err.message}<br><br>
+                        Uygulama listesi çekilemedi. Lütfen internet bağlantınızı kontrol edin.
+                    </p>`;
+                    return;
+                }
+            }
+
+            allApps = data.map(app => ({
+                displayName: app.name || 'Unnamed Application',
+                fileName: app.fileName,
+                downloadUrl: app.downloadUrl,
+                icon: app.icon || 'https://via.placeholder.com/76?text=APK'
+            }));
+
+            renderApps(allApps);
         }
 
         function renderApps(appArray) {
@@ -342,7 +360,7 @@
             }
         }
 
-        // Sayfa yüklendiğinde otomasyon verilerini getir
+        // Sayfa yüklendiğinde verileri getir
         fetchApps();
     </script>
 </body>
