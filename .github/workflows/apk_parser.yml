@@ -84,7 +84,7 @@ jobs:
                             package_name = None
                             aapt_icon_path = None
 
-                            # 1. AAPT ile Paket Adı, İsim ve İkon Yolunu Al
+                            # 1. AAPT ile Bilgileri Çek
                             try:
                                 cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
                                 out = cmd_res.stdout
@@ -108,8 +108,8 @@ jobs:
                             temp_raw_icon = "temp_raw_icon"
                             extracted = False
 
-                            # 2. İkon Stratejisi
-                            # Durum A: AAPT Doğrudan PNG/JPG Veriyorsa (XML Değilse) -> APK İçinden Çıkar
+                            # 2. İkon Çıkarma Adımları
+                            # Adım A: APK İçi Gerçek PNG
                             if aapt_icon_path and not aapt_icon_path.endswith('.xml'):
                                 try:
                                     with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
@@ -119,49 +119,41 @@ jobs:
                                             with Image.open(temp_raw_icon) as img:
                                                 img.convert("RGBA").save(icon_path, "PNG")
                                             extracted = True
-                                            print(f"  [APK İçi] Orijinal PNG Çıkarıldı: {aapt_icon_path}")
+                                            print(f"  [APK İçi] Orijinal PNG Çıkarıldı.")
                                 except Exception as e:
-                                    print(f"  APK İçi İkon Çıkarma Hatası: {e}")
+                                    print(f"  APK İçi Hatası: {e}")
 
-                            # Durum B: İkon XML (Adaptive) ise veya AAPT PNG Vermediyse -> Play Store / Web Kaynağından Çek
+                            # Adım B: Play Store Sorgusu
                             if not extracted and package_name:
-                                print(f"  İkon XML (Adaptive) veya doğrudan PNG değil. Web'den ({package_name}) HD ikon aranıyor...")
                                 try:
                                     store_url = f"https://play.google.com/store/apps/details?id={package_name}"
-                                    res = requests.get(store_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, timeout=6)
+                                    res = requests.get(store_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
                                     if res.status_code == 200:
                                         img_match = re.search(r'(https://play-lh\.googleusercontent\.com/[^"\'\s=]+)', res.text)
                                         if img_match:
                                             hd_icon_url = img_match.group(1) + "=w512-h512"
-                                            img_bytes = requests.get(hd_icon_url, timeout=6).content
+                                            img_bytes = requests.get(hd_icon_url, timeout=5).content
                                             with open(icon_path, "wb") as f:
                                                 f.write(img_bytes)
                                             extracted = True
-                                            print(f"  [Play Store] HD Orijinal İkon İndirildi.")
+                                            print(f"  [Play Store] HD İkon Çekildi.")
                                 except Exception as e:
-                                    print(f"  Web İkon Çekme Hatası: {e}")
+                                    print(f"  Play Store İkon Hatası: {e}")
 
-                            # Durum C: Web'de Bulunamadıysa Son Çare APK İçi PNG Taraması Yap
-                            if not extracted:
+                            # Adım C: Play Store Dışı Mağaza / Uptodown Taraması
+                            if not extracted and ("uptodown" in app_name.lower() or "uptodown" in str(package_name).lower()):
+                                print("  Uptodown tespit edildi, doğrudan Uptodown sunucusundan ikon çekiliyor...")
                                 try:
-                                    with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
-                                        valid_files = [
-                                            f for f in zip_ref.namelist()
-                                            if f.lower().endswith(('.png', '.webp', '.jpg')) 
-                                            and not f.endswith('.xml')
-                                            and ('ic_launcher' in f or 'app_icon' in f)
-                                        ]
-                                        if valid_files:
-                                            valid_files.sort(key=lambda x: zip_ref.getinfo(x).file_size, reverse=True)
-                                            best_icon = valid_files[0]
-                                            with open(temp_raw_icon, "wb") as f:
-                                                f.write(zip_ref.read(best_icon))
-                                            with Image.open(temp_raw_icon) as img:
-                                                img.convert("RGBA").save(icon_path, "PNG")
-                                            extracted = True
-                                            print(f"  [Yedek Tarama] İkon Çıkarıldı: {best_icon}")
+                                    up_res = requests.get("https://uptodown-app-store.en.uptodown.com/android", headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+                                    img_match = re.search(r'(https://img\.utdstc\.com/icon/[^"\'\s]+)', up_res.text)
+                                    if img_match:
+                                        img_bytes = requests.get(img_match.group(1), timeout=5).content
+                                        with open(icon_path, "wb") as f:
+                                            f.write(img_bytes)
+                                        extracted = True
+                                        print("  [Uptodown] Orijinal Logo İndirildi.")
                                 except Exception as e:
-                                    print(f"  Yedek İkon Çıkarma Hatası: {e}")
+                                    print(f"  Uptodown İkon Hatası: {e}")
 
                             # Temizlik
                             if os.path.exists(temp_apk): os.remove(temp_apk)
@@ -188,4 +180,4 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar Adaptive XML mantığıyla HD olarak güncellendi" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar Play Store ve Harici Mağaza desteğiyle güncellendi" && git push)
