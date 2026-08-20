@@ -18,15 +18,20 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: AAPT Kurulumu (APK İnceleme Aracı)
+    - name: Sistem Araclarini Kur (AAPT ve ImageMagick)
       run: |
         sudo apt-get update
-        sudo apt-get install -y aapt
+        sudo apt-get install -y aapt imagemagick
 
-    - name: Python Kurulumu
+    - name: Python ve Pillow Kurulumu
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
+
+    - name: Gerekli Python Paketlerini Yükle
+      run: |
+        python -m pip install --upgrade pip
+        pip install Pillow
 
     - name: Releases APK Icon ve apps.json Üretici
       env:
@@ -38,6 +43,7 @@ jobs:
         import urllib.request
         import subprocess
         import re
+        from PIL import Image
 
         repo = os.environ.get("GITHUB_REPOSITORY")
         token = os.environ.get("GITHUB_TOKEN")
@@ -68,7 +74,7 @@ jobs:
                             download_url = asset["browser_download_url"]
                             temp_apk = "temp_download.apk"
 
-                            print(f"İndiriliyor ve İnceleniyor: {file_name}...")
+                            print(f"İndiriliyor ve İşleniyor: {file_name}...")
                             dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
                             with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
                                 out_file.write(dl_res.read())
@@ -76,85 +82,89 @@ jobs:
                             app_name = os.path.splitext(file_name)[0]
                             icon_in_apk = None
 
-                            # 1. AAPT ile APK'nın içindeki orijinal uygulama adını ve ikon yolunu çek
+                            # 1. AAPT ile Orijinal Isim ve Ikon Yolu Bul
                             try:
                                 cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
                                 out = cmd_res.stdout
 
-                                # Gerçek Ekran İsmini Al (application-label)
                                 label_match = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", out) or re.search(r"application:\s*label='([^']+)'", out)
                                 if label_match:
                                     app_name = label_match.group(1)
 
-                                # Gerçek İkon Yolunu Al
                                 icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
                                 if icons:
-                                    icon_in_apk = icons[-1] # En yüksek çözünürlüklü ikonu seçer
+                                    icon_in_apk = icons[-1]
                             except Exception as e:
-                                print(f"AAPT Okuma Hatası: {e}")
+                                print(f"AAPT Okuma Hatasi: {e}")
 
-                            # 2. İkonu Çıkart ve icons/ Klasörüne Kaydet
-                            icon_filename_base = os.path.splitext(file_name)[0]
-                            icon_path = ""
+                            # 2. Ikonu Cikart ve Temizle
+                            icon_filename = f"{os.path.splitext(file_name)[0]}.png"
+                            icon_path = os.path.join("icons", icon_filename)
+                            temp_raw_icon = "temp_raw_icon"
                             extracted = False
 
                             try:
                                 with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
-                                    if icon_in_apk and icon_in_apk in zip_ref.namelist():
-                                        # Orijinal uzantıyı koru (.png, .webp, .jpg)
-                                        ext = os.path.splitext(icon_in_apk)[1].lower()
-                                        if not ext: ext = ".png" # Uzantı yoksa png varsay
-                                        
-                                        # JPG uzantilarini standardize et
-                                        if ext == ".jpeg": ext = ".jpg"
-                                        
-                                        full_icon_filename = f"{icon_filename_base}{ext}"
-                                        icon_path = os.path.join("icons", full_icon_filename)
-                                        
-                                        with open(icon_path, "wb") as f:
-                                            f.write(zip_ref.read(icon_in_apk))
-                                        extracted = True
-                                        print(f"  İkon AAPT ile çıkarıldı: {icon_in_apk} -> {full_icon_filename}")
+                                    target_icon = None
+                                    
+                                    # Önce AAPT yoluna bak, XML değilse seç
+                                    if icon_in_apk and icon_in_apk in zip_ref.namelist() and not icon_in_apk.endswith('.xml'):
+                                        target_icon = icon_in_apk
                                     else:
-                                        # Alternatif ikon taraması (.png, .webp, .jpg, .jpeg)
-                                        valid_extensions = ('.png', '.webp', '.jpg', '.jpeg')
-                                        for item in zip_ref.namelist():
-                                            if ('ic_launcher' in item or 'app_icon' in item) and (item.lower().endswith(valid_extensions)):
-                                                ext = os.path.splitext(item)[1].lower()
-                                                if ext == ".jpeg": ext = ".jpg"
-                                                full_icon_filename = f"{icon_filename_base}{ext}"
-                                                icon_path = os.path.join("icons", full_icon_filename)
-                                                
-                                                with open(icon_path, "wb") as f:
-                                                    f.write(zip_ref.read(item))
+                                        # Alternatif PNG/WEBP/JPG taraması (en büyük resim dosyasını seçer)
+                                        valid_files = [
+                                            item for item in zip_ref.namelist()
+                                            if ('ic_launcher' in item or 'app_icon' in item or 'icon' in item)
+                                            and item.lower().endswith(('.png', '.webp', '.jpg', '.jpeg'))
+                                            and not item.endswith('.xml')
+                                        ]
+                                        if valid_files:
+                                            # Dosya boyutuna göre sırala (En yüksek kaliteli/çözünürlüklü olanı al)
+                                            valid_files.sort(key=lambda x: zip_ref.getinfo(x).file_size, reverse=True)
+                                            target_icon = valid_files[0]
+
+                                    if target_icon:
+                                        with open(temp_raw_icon, "wb") as f:
+                                            f.write(zip_ref.read(target_icon))
+                                        
+                                        # Resmi PIL ile aç ve Standart PNG'ye dönüştür
+                                        try:
+                                            with Image.open(temp_raw_icon) as img:
+                                                img.convert("RGBA").save(icon_path, "PNG")
                                                 extracted = True
-                                                print(f"  İkon tarama ile çıkarıldı: {item} -> {full_icon_filename}")
-                                                break
+                                                print(f"  Görsel başarıyla PNG yapıldı: {target_icon}")
+                                        except Exception:
+                                            # PIL başarısız olursa ImageMagick ile dene
+                                            subprocess.run(["convert", temp_raw_icon, icon_path])
+                                            if os.path.exists(icon_path):
+                                                extracted = True
+                                                print(f"  ImageMagick ile PNG yapıldı: {target_icon}")
+
                             except Exception as e:
                                 print(f"İkon Çıkarma Hatası: {e}")
-
-                            if os.path.exists(temp_apk):
-                                os.remove(temp_apk)
+                            finally:
+                                if os.path.exists(temp_apk): os.remove(temp_apk)
+                                if os.path.exists(temp_raw_icon): os.remove(temp_raw_icon)
 
                             apps_list.append({
                                 "name": app_name,
                                 "fileName": file_name,
                                 "downloadUrl": download_url,
-                                "icon": f"icons/{os.path.basename(icon_path)}" if extracted else ""
+                                "icon": f"icons/{icon_filename}" if extracted else ""
                             })
 
         except Exception as e:
-            print(f"API Hatası: {e}")
+            print(f"API Hatasi: {e}")
 
-        print(f"Toplam İşlenen APK Sayısı: {len(apps_list)}")
+        print(f"Toplam Islenen APK Sayisi: {len(apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(apps_list, f, ensure_ascii=False, indent=2)
       shell: python
 
-    - name: Değişiklikleri GitHub Repo'suna Commit Et
+    - name: Degisiklikleri GitHub Repo'suna Commit Et
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: APK imzalı isimleri ve ikonları (JPG destekli) güncellendi" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar %100 temiz PNG formatına dönüştürüldü" && git push)
