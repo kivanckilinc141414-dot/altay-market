@@ -1,5 +1,11 @@
 [
   {
+    "name": "2 3 4 Player Games",
+    "fileName": "2+3+4+Player+Mini+Games_5.8.7_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/2%2B3%2B4%2BPlayer%2BMini%2BGames_5.8.7_APKPure.apk",
+    "icon": "icons/2+3+4+Player+Mini+Games_5.8.7_APKPure.png"
+  },
+  {
     "name": "Altay Market",
     "fileName": "altay-market.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
@@ -16,6 +22,12 @@
     "fileName": "F-Droid_1.23.2_APKPure.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/F-Droid_1.23.2_APKPure.apk",
     "icon": ""
+  },
+  {
+    "name": "Lite",
+    "fileName": "Facebook+Lite_525.0.0.5.102_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Facebook%2BLite_525.0.0.5.102_APKPure.apk",
+    "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png"
   },
   {
     "name": "Google Earth",
@@ -48,9 +60,21 @@
     "icon": ""
   },
   {
+    "name": "Spotify",
+    "fileName": "Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Spotify_%2BMusic%2Band%2BPodcasts_9.1.76.2055_APKPure.apk",
+    "icon": "icons/Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.png"
+  },
+  {
     "name": "Uptodown App Store",
     "fileName": "uptodown.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
     "icon": "icons/uptodown.png"
+  },
+  {
+    "name": "Screen Recorder",
+    "fileName": "Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Xiaomi%2BScreen%2BRecorder%2B.MIUI._4.15.2.9.1_APKPure.apk",
+    "icon": "icons/Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.png"
   }
 ]
