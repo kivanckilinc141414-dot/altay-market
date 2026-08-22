@@ -1,9 +1,27 @@
 [
   {
+    "name": "Altay Market",
+    "fileName": "altay-market.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
+    "icon": "icons/altay-market.png"
+  },
+  {
     "name": "Market",
     "fileName": "Android_Market.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Android_Market.apk",
     "icon": "icons/Android_Market.png"
+  },
+  {
+    "name": "F-Droid",
+    "fileName": "F-Droid_1.23.2_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/F-Droid_1.23.2_APKPure.apk",
+    "icon": ""
+  },
+  {
+    "name": "Google Earth",
+    "fileName": "Google+Earth_10.57.0.7_APKPure.apk",
+    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google%2BEarth_10.57.0.7_APKPure.apk",
+    "icon": "icons/Google+Earth_10.57.0.7_APKPure.png"
   },
   {
     "name": "Google Go",
@@ -33,6 +51,6 @@
     "name": "Uptodown App Store",
     "fileName": "uptodown.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
-    "icon": ""
+    "icon": "icons/uptodown.png"
   }
 ]
