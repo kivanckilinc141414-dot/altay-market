@@ -33,7 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install Pillow requests
 
-    - name: Akıllı JSON Güncelleyici
+    - name: Akıllı JSON, Sürüm ve Boyut Güncelleyici
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -62,7 +62,6 @@ jobs:
         if not os.path.exists("icons"):
             os.makedirs("icons")
 
-        # 1. Mevcut apps.json dosyasını oku (Elle yapılan değişiklikleri korumak için)
         existing_apps = []
         if os.path.exists("apps.json"):
             try:
@@ -71,7 +70,6 @@ jobs:
             except Exception:
                 pass
         
-        # Kolay arama yapmak için bir sözlük (dictionary) oluştur
         existing_dict = {app["fileName"]: app for app in existing_apps}
         new_apps_list = []
 
@@ -85,53 +83,81 @@ jobs:
                         if file_name.lower().endswith(".apk"):
                             download_url = asset["browser_download_url"]
                             
-                            # 2. EĞER UYGULAMA ZATEN JSON'DA VARSA (İşlemi hızlandır, tekrar indirme)
+                            file_size_bytes = asset.get("size", 0)
+                            file_size_mb = f"{file_size_bytes / (1024 * 1024):.1f} MB" if file_size_bytes else "Unknown"
+
+                            # Eğer uygulama zaten JSON'da varsa ve sürüm bilgisi yerindeyse tekrar indirme
                             if file_name in existing_dict:
-                                print(f"Zaten mevcut, atlanıyor: {file_name}")
+                                print(f"Already exists, skipping: {file_name}")
                                 app_data = existing_dict[file_name]
-                                app_data["downloadUrl"] = download_url # Sadece indirme linkini güncel tut
+                                app_data["downloadUrl"] = download_url
+                                app_data["fileSize"] = file_size_mb
                                 new_apps_list.append(app_data)
                                 continue
                             
-                            # 3. YENİ BİR UYGULAMAYSA İNDİR VE İKON ÇIKART
                             temp_apk = "temp_download.apk"
-                            print(f"\n--- YENİ UYGULAMA İŞLENİYOR: {file_name} ---")
+                            print(f"\n--- PROCESSING NEW APP: {file_name} ---")
                             dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
                             with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
                                 out_file.write(dl_res.read())
 
+                            if file_size_bytes == 0:
+                                b_size = os.path.getsize(temp_apk)
+                                file_size_mb = f"{b_size / (1024 * 1024):.1f} MB"
+
                             app_name = os.path.splitext(file_name)[0]
                             package_name = None
-                            aapt_icon_path = None
+                            version_name = "1.0"
+                            aapt_icon_paths = []
 
                             try:
                                 cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
                                 out = cmd_res.stdout
+                                
                                 pkg_match = re.search(r"package:\s*name='([^']+)'", out)
                                 if pkg_match: package_name = pkg_match.group(1)
+                                
                                 label_match = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", out) or re.search(r"application:\s*label='([^']+)'", out)
                                 if label_match: app_name = label_match.group(1)
-                                icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
-                                if icons: aapt_icon_path = icons[-1]
+
+                                # Sürüm adını (versionName) AAPT çıktısından çek
+                                ver_match = re.search(r"versionName='([^']+)'", out)
+                                if ver_match: version_name = ver_match.group(1)
+                                
+                                found_icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
+                                if found_icons: aapt_icon_paths = found_icons
                             except Exception as e:
-                                print(f"AAPT Hatasi: {e}")
+                                print(f"AAPT Error: {e}")
 
                             icon_filename = f"{os.path.splitext(file_name)[0]}.png"
                             icon_path = os.path.join("icons", icon_filename)
                             temp_raw_icon = "temp_raw_icon"
                             extracted = False
 
-                            if aapt_icon_path and not aapt_icon_path.endswith('.xml'):
+                            if aapt_icon_paths:
                                 try:
                                     with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
-                                        if aapt_icon_path in zip_ref.namelist():
+                                        namelist = zip_ref.namelist()
+                                        target_icon = None
+                                        for ic in reversed(aapt_icon_paths):
+                                            if ic.endswith('.png') and ic in namelist:
+                                                target_icon = ic
+                                                break
+                                        if not target_icon:
+                                            for ic in reversed(aapt_icon_paths):
+                                                if not ic.endswith('.xml') and ic in namelist:
+                                                    target_icon = ic
+                                                    break
+
+                                        if target_icon:
                                             with open(temp_raw_icon, "wb") as f:
-                                                f.write(zip_ref.read(aapt_icon_path))
+                                                f.write(zip_ref.read(target_icon))
                                             with Image.open(temp_raw_icon) as img:
                                                 img.convert("RGBA").save(icon_path, "PNG")
                                             extracted = True
-                                            print(f"  [APK İçi] PNG Çıkarıldı.")
-                                except: pass
+                                            print(f"  [APK Internal] PNG Icon Extracted: {target_icon}")
+                                except Exception as e:
+                                    print(f"  Icon Extraction Error: {e}")
 
                             if not extracted and package_name:
                                 try:
@@ -145,19 +171,7 @@ jobs:
                                             with open(icon_path, "wb") as f:
                                                 f.write(img_bytes)
                                             extracted = True
-                                            print(f"  [Play Store] HD İkon Çekildi.")
-                                except: pass
-
-                            if not extracted and ("uptodown" in app_name.lower() or "uptodown" in str(package_name).lower()):
-                                try:
-                                    up_res = requests.get("https://uptodown-app-store.en.uptodown.com/android", headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
-                                    img_match = re.search(r'(https://img\.utdstc\.com/icon/[^"\'\s]+)', up_res.text)
-                                    if img_match:
-                                        img_bytes = requests.get(img_match.group(1), timeout=5).content
-                                        with open(icon_path, "wb") as f:
-                                            f.write(img_bytes)
-                                        extracted = True
-                                        print("  [Uptodown] İkon İndirildi.")
+                                            print(f"  [Play Store] HD Icon Fetched.")
                                 except: pass
 
                             if os.path.exists(temp_apk): os.remove(temp_apk)
@@ -167,24 +181,24 @@ jobs:
                                 "name": app_name,
                                 "fileName": file_name,
                                 "downloadUrl": download_url,
+                                "fileSize": file_size_mb,
+                                "version": version_name,
                                 "icon": f"icons/{icon_filename}" if extracted else ""
                             })
 
         except Exception as e:
-            print(f"API Hatasi: {e}")
+            print(f"API Error: {e}")
 
-        # 4. GEREKSİZ/SİLİNMİŞ İKONLARI TEMİZLE
         kept_icons = [app.get("icon", "") for app in new_apps_list if app.get("icon")]
         for icon_file in os.listdir("icons"):
             icon_path = f"icons/{icon_file}"
             if icon_path not in kept_icons:
                 try:
                     os.remove(icon_path)
-                    print(f"Çöp ikon temizlendi: {icon_path}")
-                except Exception as e:
-                    print(f"Silme hatası: {e}")
+                    print(f"Garbage icon cleaned: {icon_path}")
+                except Exception as e: pass
 
-        print(f"\nToplam Güncel APK Sayısı: {len(new_apps_list)}")
+        print(f"\nTotal Active APKs: {len(new_apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
             json.dump(new_apps_list, f, ensure_ascii=False, indent=2)
@@ -195,4 +209,4 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add -A apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: apps.json akıllı güncellendi (Sadece yeni eklenen/silinenler işlendi)" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: apps.json updated with versions and file sizes" && git push)
