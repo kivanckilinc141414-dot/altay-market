@@ -3,7 +3,7 @@ name: Auto Generate Apps and Icons from Releases
 on:
   workflow_dispatch:
   release:
-    types: [published, edited]
+    types: [published, edited, created, deleted, released]
 
 permissions:
   contents: write
@@ -33,7 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install Pillow requests
 
-    - name: Releases APK Icon ve apps.json Üretici
+    - name: Akıllı JSON Güncelleyici
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -62,7 +62,18 @@ jobs:
         if not os.path.exists("icons"):
             os.makedirs("icons")
 
-        apps_list = []
+        # 1. Mevcut apps.json dosyasını oku (Elle yapılan değişiklikleri korumak için)
+        existing_apps = []
+        if os.path.exists("apps.json"):
+            try:
+                with open("apps.json", "r", encoding="utf-8") as f:
+                    existing_apps = json.load(f)
+            except Exception:
+                pass
+        
+        # Kolay arama yapmak için bir sözlük (dictionary) oluştur
+        existing_dict = {app["fileName"]: app for app in existing_apps}
+        new_apps_list = []
 
         try:
             with urllib.request.urlopen(req) as response:
@@ -73,9 +84,18 @@ jobs:
                         file_name = asset["name"]
                         if file_name.lower().endswith(".apk"):
                             download_url = asset["browser_download_url"]
+                            
+                            # 2. EĞER UYGULAMA ZATEN JSON'DA VARSA (İşlemi hızlandır, tekrar indirme)
+                            if file_name in existing_dict:
+                                print(f"Zaten mevcut, atlanıyor: {file_name}")
+                                app_data = existing_dict[file_name]
+                                app_data["downloadUrl"] = download_url # Sadece indirme linkini güncel tut
+                                new_apps_list.append(app_data)
+                                continue
+                            
+                            # 3. YENİ BİR UYGULAMAYSA İNDİR VE İKON ÇIKART
                             temp_apk = "temp_download.apk"
-
-                            print(f"\n--- İşleniyor: {file_name} ---")
+                            print(f"\n--- YENİ UYGULAMA İŞLENİYOR: {file_name} ---")
                             dl_req = urllib.request.Request(download_url, headers={"User-Agent": "GitHub-Action"})
                             with urllib.request.urlopen(dl_req) as dl_res, open(temp_apk, "wb") as out_file:
                                 out_file.write(dl_res.read())
@@ -84,32 +104,23 @@ jobs:
                             package_name = None
                             aapt_icon_path = None
 
-                            # 1. AAPT ile Bilgileri Çek
                             try:
                                 cmd_res = subprocess.run(["aapt", "dump", "badging", temp_apk], capture_output=True, text=True)
                                 out = cmd_res.stdout
-
                                 pkg_match = re.search(r"package:\s*name='([^']+)'", out)
-                                if pkg_match:
-                                    package_name = pkg_match.group(1)
-
+                                if pkg_match: package_name = pkg_match.group(1)
                                 label_match = re.search(r"application-label(?:-[a-zA-Z]+)?:'([^']+)'", out) or re.search(r"application:\s*label='([^']+)'", out)
-                                if label_match:
-                                    app_name = label_match.group(1)
-
+                                if label_match: app_name = label_match.group(1)
                                 icons = re.findall(r"application-icon-\d+:'([^']+)'", out) or re.findall(r"icon='([^']+)'", out)
-                                if icons:
-                                    aapt_icon_path = icons[-1]
+                                if icons: aapt_icon_path = icons[-1]
                             except Exception as e:
-                                print(f"AAPT Okuma Hatasi: {e}")
+                                print(f"AAPT Hatasi: {e}")
 
                             icon_filename = f"{os.path.splitext(file_name)[0]}.png"
                             icon_path = os.path.join("icons", icon_filename)
                             temp_raw_icon = "temp_raw_icon"
                             extracted = False
 
-                            # 2. İkon Çıkarma Adımları
-                            # Adım A: APK İçi Gerçek PNG
                             if aapt_icon_path and not aapt_icon_path.endswith('.xml'):
                                 try:
                                     with zipfile.ZipFile(temp_apk, 'r') as zip_ref:
@@ -119,11 +130,9 @@ jobs:
                                             with Image.open(temp_raw_icon) as img:
                                                 img.convert("RGBA").save(icon_path, "PNG")
                                             extracted = True
-                                            print(f"  [APK İçi] Orijinal PNG Çıkarıldı.")
-                                except Exception as e:
-                                    print(f"  APK İçi Hatası: {e}")
+                                            print(f"  [APK İçi] PNG Çıkarıldı.")
+                                except: pass
 
-                            # Adım B: Play Store Sorgusu
                             if not extracted and package_name:
                                 try:
                                     store_url = f"https://play.google.com/store/apps/details?id={package_name}"
@@ -137,12 +146,9 @@ jobs:
                                                 f.write(img_bytes)
                                             extracted = True
                                             print(f"  [Play Store] HD İkon Çekildi.")
-                                except Exception as e:
-                                    print(f"  Play Store İkon Hatası: {e}")
+                                except: pass
 
-                            # Adım C: Play Store Dışı Mağaza / Uptodown Taraması
                             if not extracted and ("uptodown" in app_name.lower() or "uptodown" in str(package_name).lower()):
-                                print("  Uptodown tespit edildi, doğrudan Uptodown sunucusundan ikon çekiliyor...")
                                 try:
                                     up_res = requests.get("https://uptodown-app-store.en.uptodown.com/android", headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
                                     img_match = re.search(r'(https://img\.utdstc\.com/icon/[^"\'\s]+)', up_res.text)
@@ -151,15 +157,13 @@ jobs:
                                         with open(icon_path, "wb") as f:
                                             f.write(img_bytes)
                                         extracted = True
-                                        print("  [Uptodown] Orijinal Logo İndirildi.")
-                                except Exception as e:
-                                    print(f"  Uptodown İkon Hatası: {e}")
+                                        print("  [Uptodown] İkon İndirildi.")
+                                except: pass
 
-                            # Temizlik
                             if os.path.exists(temp_apk): os.remove(temp_apk)
                             if os.path.exists(temp_raw_icon): os.remove(temp_raw_icon)
 
-                            apps_list.append({
+                            new_apps_list.append({
                                 "name": app_name,
                                 "fileName": file_name,
                                 "downloadUrl": download_url,
@@ -169,15 +173,26 @@ jobs:
         except Exception as e:
             print(f"API Hatasi: {e}")
 
-        print(f"\nToplam İşlenen APK Sayısı: {len(apps_list)}")
+        # 4. GEREKSİZ/SİLİNMİŞ İKONLARI TEMİZLE
+        kept_icons = [app.get("icon", "") for app in new_apps_list if app.get("icon")]
+        for icon_file in os.listdir("icons"):
+            icon_path = f"icons/{icon_file}"
+            if icon_path not in kept_icons:
+                try:
+                    os.remove(icon_path)
+                    print(f"Çöp ikon temizlendi: {icon_path}")
+                except Exception as e:
+                    print(f"Silme hatası: {e}")
+
+        print(f"\nToplam Güncel APK Sayısı: {len(new_apps_list)}")
 
         with open("apps.json", "w", encoding="utf-8") as f:
-            json.dump(apps_list, f, ensure_ascii=False, indent=2)
+            json.dump(new_apps_list, f, ensure_ascii=False, indent=2)
       shell: python
 
     - name: Degisiklikleri GitHub Repo'suna Commit Et
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add apps.json icons/
-        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: İkonlar Play Store ve Harici Mağaza desteğiyle güncellendi" && git push)
+        git add -A apps.json icons/
+        git diff --quiet && git diff --staged --quiet || (git commit -m "auto: apps.json akıllı güncellendi (Sadece yeni eklenen/silinenler işlendi)" && git push)
