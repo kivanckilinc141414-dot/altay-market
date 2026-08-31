@@ -6,18 +6,6 @@
     "icon": "icons/2+3+4+Player+Mini+Games_5.8.7_APKPure.png"
   },
   {
-    "name": "Altay Bird",
-    "fileName": "altay-bird.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-bird.apk",
-    "icon": "icons/altay-bird.png"
-  },
-  {
-    "name": "Altay Clock",
-    "fileName": "altay-clock.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-clock.apk",
-    "icon": "icons/altay-clock.png"
-  },
-  {
     "name": "Altay Internet Explorer",
     "fileName": "altay-explorer.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-explorer.apk",
@@ -28,12 +16,6 @@
     "fileName": "altay-market.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
     "icon": "icons/altay-market.png"
-  },
-  {
-    "name": "Market",
-    "fileName": "Android_Market.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Android_Market.apk",
-    "icon": "icons/Android_Market.png"
   },
   {
     "name": "F-Droid",
@@ -48,46 +30,10 @@
     "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png"
   },
   {
-    "name": "Google Earth",
-    "fileName": "Google+Earth_10.57.0.7_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google%2BEarth_10.57.0.7_APKPure.apk",
-    "icon": "icons/Google+Earth_10.57.0.7_APKPure.png"
-  },
-  {
-    "name": "Google Go",
-    "fileName": "Google_Go.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Google_Go.apk",
-    "icon": "icons/Google_Go.png"
-  },
-  {
     "name": "Instagram Lite",
     "fileName": "Instagram+Lite_525.0.0.5.102_APKPure.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Instagram%2BLite_525.0.0.5.102_APKPure.apk",
     "icon": "icons/Instagram+Lite_525.0.0.5.102_APKPure.png"
-  },
-  {
-    "name": "Internet Explore Browser",
-    "fileName": "Internet+Explorer+Web+Brower_1.0_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Internet%2BExplorer%2BWeb%2BBrower_1.0_APKPure.apk",
-    "icon": "icons/Internet+Explorer+Web+Brower_1.0_APKPure.png"
-  },
-  {
-    "name": "Internet Altay Chess",
-    "fileName": "internetaltaychess.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/internetaltaychess.apk",
-    "icon": "icons/internetaltaychess.png"
-  },
-  {
-    "name": "MINEFAKE",
-    "fileName": "minefake.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/minefake.apk",
-    "icon": "icons/minefake.png"
-  },
-  {
-    "name": "New Flappy Bird",
-    "fileName": "NewFlappybird.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/NewFlappybird.apk",
-    "icon": "icons/NewFlappybird.png"
   },
   {
     "name": "NewPipe",
@@ -105,7 +51,7 @@
     "name": "Uptodown App Store",
     "fileName": "uptodown.apk",
     "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
-    "icon": ""
+    "icon": "icons/uptodown.png"
   },
   {
     "name": "Screen Recorder",
