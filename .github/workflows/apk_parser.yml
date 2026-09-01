@@ -1,4 +1,4 @@
-name: Ultimate Native APK Metadata Scanner
+name: True Android Manifest Scanner
 
 on:
   release:
@@ -22,12 +22,12 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install aapt for reading APK metadata
+      - name: Install aapt for Android Manifest parsing
         run: |
           sudo apt-get update
           sudo apt-get install -y aapt
 
-      - name: Run Native APK Parser
+      - name: Run Manifest Parser & Multi-Format Icon Matcher
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -44,35 +44,36 @@ jobs:
           
           apps_dict = {}
 
-          # 0. İkonları önbellekle
+          # 0. Tüm logo formatlarını (.png, .jpg, .jpeg, .webp, .svg, .ico, .gif) önbellekle
           available_icons = {}
           if os.path.exists("icons"):
               for root, dirs, files in os.walk("icons"):
                   for file in files:
-                      if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg', '.ico')):
+                      if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg', '.ico', '.gif')):
+                          rel_path = os.path.join(root, file).replace("\\", "/")
                           base_name = os.path.splitext(file)[0].lower()
-                          available_icons[base_name] = os.path.join(root, file).replace("\\", "/")
+                          available_icons[base_name] = rel_path
                           clean_base = re.sub(r'[^a-z0-9]', '', base_name)
-                          available_icons[clean_base] = os.path.join(root, file).replace("\\", "/")
+                          available_icons[clean_base] = rel_path
 
-          def find_best_icon(identifier):
+          def find_icon(identifier):
               if not identifier:
                   return ""
               clean_id = identifier.lower().replace('.apk', '')
               super_clean_id = re.sub(r'[^a-z0-9]', '', clean_id)
+              
               if clean_id in available_icons:
                   return available_icons[clean_id]
               if super_clean_id in available_icons:
                   return available_icons[super_clean_id]
+                  
               for key, path in available_icons.items():
                   if key in super_clean_id or super_clean_id in key:
                       return path
               return ""
 
-          def get_apk_metadata(apk_path):
-              """aapt kullanarak APK'nın içindeki gerçek uygulama adını ve sürümünü okur"""
-              app_name = None
-              version_name = None
+          def get_manifest_app_name(apk_path):
+              """aapt kullanarak AndroidManifest.xml içindeki gerçek uygulama adını okur"""
               try:
                   result = subprocess.run(['aapt', 'dump', 'badging', apk_path], 
                                           stdout=subprocess.PIPE, 
@@ -81,19 +82,17 @@ jobs:
                                           timeout=15)
                   output = result.stdout
                   
-                  # Gerçek sürüm adını yakala (versionName='...')
-                  v_match = re.search(r"versionName='([^']+)'", output)
-                  if v_match:
-                      version_name = v_match.group(1)
+                  # Önce Türkçe uygulama adına bak, bulamazsan genel uygulama adına bak
+                  tr_match = re.search(r"application-label-tr:'([^']+)'", output)
+                  if tr_match:
+                      return tr_match.group(1)
                       
-                  # Gerçek uygulama adını yakala (application-label:'...')
-                  label_matches = re.findall(r"application-label(?:-[a-z]{2})?:'([^']+)'", output)
-                  if label_matches:
-                      app_name = label_matches[0]
+                  label_match = re.search(r"application-label:'([^']+)'", output)
+                  if label_match:
+                      return label_match.group(1)
               except Exception as e:
-                  print(f"aapt okuma hatası ({apk_path}): {e}")
-                  
-              return app_name, version_name
+                  print(f"aapt okuma hatası: {e}")
+              return None
 
           # 1. GitHub Releases Taraması
           url = f"https://api.github.com/repos/{repo}/releases"
@@ -117,32 +116,29 @@ jobs:
                               else:
                                   file_size = f"{size_bytes / 1024:.1f} KB"
                               
-                              # APK'yı geçici indirip içini okuyalım
+                              # APK'yı geçici olarak indirip içindeki XML manifestini oku
                               temp_apk = f"temp_{asset_name}"
-                              print(f"İndiriliyor ve analiz ediliyor: {asset_name}...")
                               urllib.request.urlretrieve(download_url, temp_apk)
                               
-                              embedded_name, embedded_version = get_apk_metadata(temp_apk)
+                              manifest_name = get_manifest_app_name(temp_apk)
                               
-                              # Eğer içeriden okunamazsa dosya adından yedek türet
-                              if not embedded_name or embedded_name.startswith('http'):
-                                  embedded_name = asset_name.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
-                              if not embedded_version:
-                                  embedded_version = "1.0"
-                                  
                               if os.path.exists(temp_apk):
                                   os.remove(temp_apk)
-                                  
-                              icon_path = find_best_icon(asset_name)
+                              
+                              # Eğer manifestten isim okunamazsa dosya adını temizleyerek yedek al
+                              if not manifest_name:
+                                  clean_fallback = asset_name.replace('.apk', '').replace('_', ' ').replace('-', ' ')
+                                  manifest_name = clean_fallback.title()
 
-                              print(f" > İÇERİK OKUNDU: İsim -> {embedded_name} | Sürüm -> {embedded_version}")
+                              icon_path = find_icon(asset_name)
+
+                              print(f"OKUNAN MANIFEST İSİM: {manifest_name} | DOSYA: {asset_name}")
 
                               apps_dict[asset_name] = {
-                                  "name": embedded_name,
+                                  "name": manifest_name,
                                   "fileName": asset_name,
                                   "downloadUrl": download_url,
                                   "fileSize": file_size,
-                                  "version": embedded_version,
                                   "icon": icon_path
                               }
           except Exception as e:
@@ -162,30 +158,25 @@ jobs:
                     else:
                         file_size = f"{size_bytes / 1024:.1f} KB"
                     
-                    embedded_name, embedded_version = get_apk_metadata(file_path)
-                    if not embedded_name:
-                        embedded_name = file.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
-                    if not embedded_version:
-                        embedded_version = "1.0"
+                    manifest_name = get_manifest_app_name(file_path)
+                    if not manifest_name:
+                        manifest_name = file.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
                         
                     download_url = f"https://raw.githubusercontent.com/{repo}/main/{file}"
-                    icon_path = find_best_icon(file)
-
-                    print(f" > LOCAL İÇERİK OKUNDU: İsim -> {embedded_name} | Sürüm -> {embedded_version}")
+                    icon_path = find_icon(file)
 
                     apps_dict[file] = {
-                        "name": embedded_name,
+                        "name": manifest_name,
                         "fileName": file,
                         "downloadUrl": download_url,
                         "fileSize": file_size,
-                        "version": embedded_version,
                         "icon": icon_path
                     }
 
           apps_list = list(apps_dict.values())
           with open('apps.json', 'w', encoding='utf-8') as f:
               json.dump(apps_list, f, ensure_ascii=False, indent=4)
-          print(f"Toplam {len(apps_list)} uygulama doğrudan APK içinden okunarak işlendi.")
+          print(f"Toplam {len(apps_list)} uygulama manifest verileriyle işlendi.")
           EOF
 
       - name: Commit and push changes if updated
@@ -193,4 +184,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.github.com"
           git add apps.json
-          git diff --staged --quiet || (git commit -m "Auto-scan: extract real embedded app name and version via aapt" && git push)
+          git diff --staged --quiet || (git commit -m "Auto-scan: extract exact app name from AndroidManifest via aapt" && git push)
