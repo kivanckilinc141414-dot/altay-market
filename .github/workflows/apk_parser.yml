@@ -1,4 +1,4 @@
-name: Ultimate Altay Market Scanner v3
+name: Ultimate Native APK Metadata Scanner
 
 on:
   release:
@@ -22,7 +22,12 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run Ultimate App & Version Scanner v3
+      - name: Install aapt for reading APK metadata
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y aapt
+
+      - name: Run Native APK Parser
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -31,6 +36,7 @@ jobs:
           import os
           import json
           import urllib.request
+          import subprocess
           import re
 
           repo = os.environ['REPOSITORY']
@@ -63,64 +69,31 @@ jobs:
                       return path
               return ""
 
-          def clean_app_name(filename):
-              # Uzantıyı kaldır
-              name = filename.replace('.apk', '')
-              
-              # Paket adı formatındaysa (örn: org.telegram.messenger) son parçayı al
-              if '.' in name and not name.startswith('v'):
-                  parts = name.split('.')
-                  # Son parça sayı değilse onu isim olarak al
-                  potential_name = parts[-1]
-                  if not potential_name.isdigit():
-                      name = potential_name
-
-              # Mimari ve sürüm eklerini temizle (arm64, v7a, release, _v1.2 vb.)
-              name = re.sub(r'[-_]?(arm64|armeabi|v7a|x86|universal|release|debug|nightly).*$', '', name, flags=re.IGNORECASE)
-              name = re.sub(r'[-_v]?\d+[\d\.]*$', '', name)
-              
-              # Alt çizgi ve tireleri boşluğa çevir
-              name = name.replace('_', ' ').replace('-', ' ').strip()
-              
-              # Bilinen popüler uygulamalar sözlüğü (Garanti çözüm)
-              known_apps = {
-                  'fdroid': 'F-Droid',
-                  'f-droid': 'F-Droid',
-                  'newpipe': 'NewPipe',
-                  'telegram': 'Telegram',
-                  'whatsapp': 'WhatsApp',
-                  'spotify': 'Spotify',
-                  'minecraft': 'Minecraft',
-                  'discord': 'Discord',
-                  'youtube': 'YouTube',
-                  'revanced': 'ReVanced'
-              }
-              
-              lower_key = name.lower().replace(' ', '')
-              if lower_key in known_apps:
-                  return known_apps[lower_key]
-              
-              return name.title() if len(name) > 1 else filename.replace('.apk', '').title()
-
-          def extract_version(tag, filename):
-              # 1. Tag içinde sürüm ara (örn: v1.16.0 veya 2.4)
-              if tag:
-                  m = re.search(r'v?(\d+[\d\.]*)', tag)
-                  if m:
-                      return m.group(1)
-              
-              # 2. Dosya adında sürüm ara (örn: _v1.2.3.apk veya -1.5.apk)
-              if filename:
-                  # Önce alt çizgi veya tireden sonra gelen versiyonları ara
-                  m = re.search(r'[-_v](\d+[\d\.]+\d+)', filename)
-                  if m:
-                      return m.group(1)
-                  # Genel sayı kalıbı ara
-                  m = re.search(r'(\d+\.\d+[\d\.]*)', filename)
-                  if m:
-                      return m.group(1)
+          def get_apk_metadata(apk_path):
+              """aapt kullanarak APK'nın içindeki gerçek uygulama adını ve sürümünü okur"""
+              app_name = None
+              version_name = None
+              try:
+                  result = subprocess.run(['aapt', 'dump', 'badging', apk_path], 
+                                          stdout=subprocess.PIPE, 
+                                          stderr=subprocess.PIPE, 
+                                          text=True, 
+                                          timeout=15)
+                  output = result.stdout
+                  
+                  # Gerçek sürüm adını yakala (versionName='...')
+                  v_match = re.search(r"versionName='([^']+)'", output)
+                  if v_match:
+                      version_name = v_match.group(1)
                       
-              return "1.0"
+                  # Gerçek uygulama adını yakala (application-label:'...')
+                  label_matches = re.findall(r"application-label(?:-[a-z]{2})?:'([^']+)'", output)
+                  if label_matches:
+                      app_name = label_matches[0]
+              except Exception as e:
+                  print(f"aapt okuma hatası ({apk_path}): {e}")
+                  
+              return app_name, version_name
 
           # 1. GitHub Releases Taraması
           url = f"https://api.github.com/repos/{repo}/releases"
@@ -133,8 +106,6 @@ jobs:
               with urllib.request.urlopen(req) as response:
                   releases = json.loads(response.read().decode())
                   for release in releases:
-                      tag_name = release.get('tag_name', '').strip()
-                      
                       for asset in release.get('assets', []):
                           asset_name = asset.get('name', '')
                           if asset_name.endswith('.apk'):
@@ -146,18 +117,32 @@ jobs:
                               else:
                                   file_size = f"{size_bytes / 1024:.1f} KB"
                               
-                              app_name = clean_app_name(asset_name)
-                              version = extract_version(tag_name, asset_name)
+                              # APK'yı geçici indirip içini okuyalım
+                              temp_apk = f"temp_{asset_name}"
+                              print(f"İndiriliyor ve analiz ediliyor: {asset_name}...")
+                              urllib.request.urlretrieve(download_url, temp_apk)
+                              
+                              embedded_name, embedded_version = get_apk_metadata(temp_apk)
+                              
+                              # Eğer içeriden okunamazsa dosya adından yedek türet
+                              if not embedded_name or embedded_name.startswith('http'):
+                                  embedded_name = asset_name.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
+                              if not embedded_version:
+                                  embedded_version = "1.0"
+                                  
+                              if os.path.exists(temp_apk):
+                                  os.remove(temp_apk)
+                                  
                               icon_path = find_best_icon(asset_name)
 
-                              print(f"BULUNAN (Release): İsim -> {app_name}, Sürüm -> {version}, Dosya -> {asset_name}")
+                              print(f" > İÇERİK OKUNDU: İsim -> {embedded_name} | Sürüm -> {embedded_version}")
 
                               apps_dict[asset_name] = {
-                                  "name": app_name,
+                                  "name": embedded_name,
                                   "fileName": asset_name,
                                   "downloadUrl": download_url,
                                   "fileSize": file_size,
-                                  "version": version,
+                                  "version": embedded_version,
                                   "icon": icon_path
                               }
           except Exception as e:
@@ -177,26 +162,30 @@ jobs:
                     else:
                         file_size = f"{size_bytes / 1024:.1f} KB"
                     
-                    app_name = clean_app_name(file)
-                    version = extract_version("", file)
+                    embedded_name, embedded_version = get_apk_metadata(file_path)
+                    if not embedded_name:
+                        embedded_name = file.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
+                    if not embedded_version:
+                        embedded_version = "1.0"
+                        
                     download_url = f"https://raw.githubusercontent.com/{repo}/main/{file}"
                     icon_path = find_best_icon(file)
 
-                    print(f"BULUNAN (Local): İsim -> {app_name}, Sürüm -> {version}, Dosya -> {file}")
+                    print(f" > LOCAL İÇERİK OKUNDU: İsim -> {embedded_name} | Sürüm -> {embedded_version}")
 
                     apps_dict[file] = {
-                        "name": app_name,
+                        "name": embedded_name,
                         "fileName": file,
                         "downloadUrl": download_url,
                         "fileSize": file_size,
-                        "version": version,
+                        "version": embedded_version,
                         "icon": icon_path
                     }
 
           apps_list = list(apps_dict.values())
           with open('apps.json', 'w', encoding='utf-8') as f:
               json.dump(apps_list, f, ensure_ascii=False, indent=4)
-          print(f"Toplam {len(apps_list)} uygulama başarıyla işlendi ve apps.json kaydedildi.")
+          print(f"Toplam {len(apps_list)} uygulama doğrudan APK içinden okunarak işlendi.")
           EOF
 
       - name: Commit and push changes if updated
@@ -204,4 +193,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.github.com"
           git add apps.json
-          git diff --staged --quiet || (git commit -m "Auto-scan: fix app names and versions precisely v3" && git push)
+          git diff --staged --quiet || (git commit -m "Auto-scan: extract real embedded app name and version via aapt" && git push)
