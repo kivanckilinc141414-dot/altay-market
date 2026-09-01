@@ -1,4 +1,4 @@
-name: Ultimate Altay Market Scanner v2
+name: Ultimate Altay Market Scanner v3
 
 on:
   release:
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run Bulletproof App & Version Scanner
+      - name: Run Ultimate App & Version Scanner v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -64,12 +64,25 @@ jobs:
               return ""
 
           def clean_app_name(filename):
-              # Dosya adından uzantıyı ve sürüm eklerini temizleyerek şık bir uygulama adı üret
-              name_part = filename.replace('.apk', '')
-              name_part = re.sub(r'[-_v]?\d+(\.\d+)+.*$', '', name_part)
-              name_part = name_part.replace('_', ' ').replace('-', ' ').strip()
+              # Uzantıyı kaldır
+              name = filename.replace('.apk', '')
               
-              # Bilinen popüler uygulamalar için özel isim sözlüğü
+              # Paket adı formatındaysa (örn: org.telegram.messenger) son parçayı al
+              if '.' in name and not name.startswith('v'):
+                  parts = name.split('.')
+                  # Son parça sayı değilse onu isim olarak al
+                  potential_name = parts[-1]
+                  if not potential_name.isdigit():
+                      name = potential_name
+
+              # Mimari ve sürüm eklerini temizle (arm64, v7a, release, _v1.2 vb.)
+              name = re.sub(r'[-_]?(arm64|armeabi|v7a|x86|universal|release|debug|nightly).*$', '', name, flags=re.IGNORECASE)
+              name = re.sub(r'[-_v]?\d+[\d\.]*$', '', name)
+              
+              # Alt çizgi ve tireleri boşluğa çevir
+              name = name.replace('_', ' ').replace('-', ' ').strip()
+              
+              # Bilinen popüler uygulamalar sözlüğü (Garanti çözüm)
               known_apps = {
                   'fdroid': 'F-Droid',
                   'f-droid': 'F-Droid',
@@ -78,28 +91,35 @@ jobs:
                   'whatsapp': 'WhatsApp',
                   'spotify': 'Spotify',
                   'minecraft': 'Minecraft',
-                  'discord': 'Discord'
+                  'discord': 'Discord',
+                  'youtube': 'YouTube',
+                  'revanced': 'ReVanced'
               }
-              lower_name = name_part.lower().replace(' ', '')
-              if lower_name in known_apps:
-                  return known_apps[lower_name]
               
-              return name_part.title() if len(name_part) > 1 else filename.replace('.apk', '').title()
+              lower_key = name.lower().replace(' ', '')
+              if lower_key in known_apps:
+                  return known_apps[lower_key]
+              
+              return name.title() if len(name) > 1 else filename.replace('.apk', '').title()
 
           def extract_version(tag, filename):
-              # 1. Önce Release Tag'ine bak (Örn: v1.16.0 -> 1.16.0)
+              # 1. Tag içinde sürüm ara (örn: v1.16.0 veya 2.4)
               if tag:
-                  m = re.search(r'(\d+\.\d+(?:\.\d+)?)', tag)
+                  m = re.search(r'v?(\d+[\d\.]*)', tag)
                   if m:
                       return m.group(1)
-              # 2. Tag yoksa veya uymadıysa APK dosya adından yakala (Örn: fdroid_1.16.0.apk)
+              
+              # 2. Dosya adında sürüm ara (örn: _v1.2.3.apk veya -1.5.apk)
               if filename:
-                  m = re.search(r'[-_v](\d+\.\d+(?:\.\d+)?)', filename)
+                  # Önce alt çizgi veya tireden sonra gelen versiyonları ara
+                  m = re.search(r'[-_v](\d+[\d\.]+\d+)', filename)
                   if m:
                       return m.group(1)
-                  m = re.search(r'(\d+\.\d+(?:\.\d+)?)', filename)
+                  # Genel sayı kalıbı ara
+                  m = re.search(r'(\d+\.\d+[\d\.]*)', filename)
                   if m:
                       return m.group(1)
+                      
               return "1.0"
 
           # 1. GitHub Releases Taraması
@@ -129,6 +149,8 @@ jobs:
                               app_name = clean_app_name(asset_name)
                               version = extract_version(tag_name, asset_name)
                               icon_path = find_best_icon(asset_name)
+
+                              print(f"BULUNAN (Release): İsim -> {app_name}, Sürüm -> {version}, Dosya -> {asset_name}")
 
                               apps_dict[asset_name] = {
                                   "name": app_name,
@@ -160,6 +182,8 @@ jobs:
                     download_url = f"https://raw.githubusercontent.com/{repo}/main/{file}"
                     icon_path = find_best_icon(file)
 
+                    print(f"BULUNAN (Local): İsim -> {app_name}, Sürüm -> {version}, Dosya -> {file}")
+
                     apps_dict[file] = {
                         "name": app_name,
                         "fileName": file,
@@ -172,7 +196,7 @@ jobs:
           apps_list = list(apps_dict.values())
           with open('apps.json', 'w', encoding='utf-8') as f:
               json.dump(apps_list, f, ensure_ascii=False, indent=4)
-          print(f"Toplam {len(apps_list)} uygulama başarıyla işlendi.")
+          print(f"Toplam {len(apps_list)} uygulama başarıyla işlendi ve apps.json kaydedildi.")
           EOF
 
       - name: Commit and push changes if updated
@@ -180,4 +204,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.github.com"
           git add apps.json
-          git diff --staged --quiet || (git commit -m "Auto-scan: fix app names and versions correctly" && git push)
+          git diff --staged --quiet || (git commit -m "Auto-scan: fix app names and versions precisely v3" && git push)
