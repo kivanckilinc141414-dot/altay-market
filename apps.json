@@ -1,10 +1,10 @@
 [
     {
-        "name": "7 Apkpure",
+        "name": "2 3 4 Player Games",
         "fileName": "2+3+4+Player+Mini+Games_5.8.7_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/2%2B3%2B4%2BPlayer%2BMini%2BGames_5.8.7_APKPure.apk",
         "fileSize": "78.0 MB",
-        "version": "1.0",
+        "version": "5.8.7",
         "icon": "icons/2+3+4+Player+Mini+Games_5.8.7_APKPure.png"
     },
     {
@@ -12,7 +12,7 @@
         "fileName": "altay-explorer.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-explorer.apk",
         "fileSize": "765.4 KB",
-        "version": "1.0",
+        "version": "2.0",
         "icon": "icons/altay-explorer.png"
     },
     {
@@ -20,63 +20,63 @@
         "fileName": "altay-market.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
         "fileSize": "753.7 KB",
-        "version": "1.0",
+        "version": "3.4",
         "icon": "icons/altay-market.png"
     },
     {
-        "name": "2 Apkpure",
+        "name": "F-Droid",
         "fileName": "F-Droid_1.23.2_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/F-Droid_1.23.2_APKPure.apk",
         "fileSize": "11.9 MB",
-        "version": "1.0",
+        "version": "1.23.2",
         "icon": ""
     },
     {
-        "name": "102 Apkpure",
+        "name": "Lite",
         "fileName": "Facebook+Lite_525.0.0.5.102_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Facebook%2BLite_525.0.0.5.102_APKPure.apk",
         "fileSize": "3.3 MB",
-        "version": "1.0",
+        "version": "525.0.0.5.102",
         "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png"
     },
     {
-        "name": "102 Apkpure",
+        "name": "Instagram Lite",
         "fileName": "Instagram+Lite_525.0.0.5.102_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Instagram%2BLite_525.0.0.5.102_APKPure.apk",
         "fileSize": "3.6 MB",
-        "version": "1.0",
+        "version": "525.0.0.5.102",
         "icon": "icons/Instagram+Lite_525.0.0.5.102_APKPure.png"
     },
     {
-        "name": "1 Apkpure",
+        "name": "NewPipe",
         "fileName": "NewPipe_0.29.1_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/NewPipe_0.29.1_APKPure.apk",
         "fileSize": "11.0 MB",
-        "version": "1.0",
+        "version": "0.29.1",
         "icon": ""
     },
     {
-        "name": "2055 Apkpure",
+        "name": "Spotify",
         "fileName": "Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Spotify_%2BMusic%2Band%2BPodcasts_9.1.76.2055_APKPure.apk",
         "fileSize": "139.2 MB",
-        "version": "1.0",
+        "version": "9.1.76.2055",
         "icon": "icons/Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.png"
     },
     {
-        "name": "Uptodown",
+        "name": "Uptodown App Store",
         "fileName": "uptodown.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
         "fileSize": "14.6 MB",
-        "version": "1.0",
+        "version": "7.38",
         "icon": "icons/uptodown.png"
     },
     {
-        "name": "1 Apkpure",
+        "name": "Screen Recorder",
         "fileName": "Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Xiaomi%2BScreen%2BRecorder%2B.MIUI._4.15.2.9.1_APKPure.apk",
         "fileSize": "4.4 MB",
-        "version": "1.0",
+        "version": "4.15.2.9.1",
         "icon": "icons/Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.png"
     }
 ]
