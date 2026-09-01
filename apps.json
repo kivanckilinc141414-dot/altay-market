@@ -1,72 +1,82 @@
 [
-  {
-    "name": "2 3 4 Player Games",
-    "fileName": "2+3+4+Player+Mini+Games_5.8.7_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/2%2B3%2B4%2BPlayer%2BMini%2BGames_5.8.7_APKPure.apk",
-    "icon": "icons/2+3+4+Player+Mini+Games_5.8.7_APKPure.png",
-    "fileSize": "78.0 MB"
-  },
-  {
-    "name": "Altay Internet Explorer",
-    "fileName": "altay-explorer.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-explorer.apk",
-    "icon": "icons/altay-explorer.png",
-    "fileSize": "0.7 MB"
-  },
-  {
-    "name": "Altay Market",
-    "fileName": "altay-market.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
-    "icon": "icons/altay-market.png",
-    "fileSize": "0.7 MB"
-  },
-  {
-    "name": "F-Droid",
-    "fileName": "F-Droid_1.23.2_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/F-Droid_1.23.2_APKPure.apk",
-    "icon": "",
-    "fileSize": "11.9 MB"
-  },
-  {
-    "name": "Lite",
-    "fileName": "Facebook+Lite_525.0.0.5.102_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Facebook%2BLite_525.0.0.5.102_APKPure.apk",
-    "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png",
-    "fileSize": "3.3 MB"
-  },
-  {
-    "name": "Instagram Lite",
-    "fileName": "Instagram+Lite_525.0.0.5.102_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Instagram%2BLite_525.0.0.5.102_APKPure.apk",
-    "icon": "icons/Instagram+Lite_525.0.0.5.102_APKPure.png",
-    "fileSize": "3.6 MB"
-  },
-  {
-    "name": "NewPipe",
-    "fileName": "NewPipe_0.29.1_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/NewPipe_0.29.1_APKPure.apk",
-    "icon": "",
-    "fileSize": "11.0 MB"
-  },
-  {
-    "name": "Spotify",
-    "fileName": "Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Spotify_%2BMusic%2Band%2BPodcasts_9.1.76.2055_APKPure.apk",
-    "icon": "icons/Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.png",
-    "fileSize": "139.2 MB"
-  },
-  {
-    "name": "Uptodown App Store",
-    "fileName": "uptodown.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
-    "icon": "icons/uptodown.png",
-    "fileSize": "14.6 MB"
-  },
-  {
-    "name": "Screen Recorder",
-    "fileName": "Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.apk",
-    "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Xiaomi%2BScreen%2BRecorder%2B.MIUI._4.15.2.9.1_APKPure.apk",
-    "icon": "icons/Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.png",
-    "fileSize": "4.4 MB"
-  }
+    {
+        "name": "altay-market",
+        "fileName": "2+3+4+Player+Mini+Games_5.8.7_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/2%2B3%2B4%2BPlayer%2BMini%2BGames_5.8.7_APKPure.apk",
+        "fileSize": "78.0 MB",
+        "version": "1.0",
+        "icon": "icons/2+3+4+Player+Mini+Games_5.8.7_APKPure.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "altay-explorer.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-explorer.apk",
+        "fileSize": "765.4 KB",
+        "version": "1.0",
+        "icon": "icons/altay-explorer.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "altay-market.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/altay-market.apk",
+        "fileSize": "753.7 KB",
+        "version": "1.0",
+        "icon": "icons/altay-market.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "F-Droid_1.23.2_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/F-Droid_1.23.2_APKPure.apk",
+        "fileSize": "11.9 MB",
+        "version": "1.0",
+        "icon": ""
+    },
+    {
+        "name": "altay-market",
+        "fileName": "Facebook+Lite_525.0.0.5.102_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Facebook%2BLite_525.0.0.5.102_APKPure.apk",
+        "fileSize": "3.3 MB",
+        "version": "1.0",
+        "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "Instagram+Lite_525.0.0.5.102_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Instagram%2BLite_525.0.0.5.102_APKPure.apk",
+        "fileSize": "3.6 MB",
+        "version": "1.0",
+        "icon": "icons/Instagram+Lite_525.0.0.5.102_APKPure.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "NewPipe_0.29.1_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/NewPipe_0.29.1_APKPure.apk",
+        "fileSize": "11.0 MB",
+        "version": "1.0",
+        "icon": ""
+    },
+    {
+        "name": "altay-market",
+        "fileName": "Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Spotify_%2BMusic%2Band%2BPodcasts_9.1.76.2055_APKPure.apk",
+        "fileSize": "139.2 MB",
+        "version": "1.0",
+        "icon": "icons/Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "uptodown.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
+        "fileSize": "14.6 MB",
+        "version": "1.0",
+        "icon": "icons/uptodown.png"
+    },
+    {
+        "name": "altay-market",
+        "fileName": "Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.apk",
+        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Xiaomi%2BScreen%2BRecorder%2B.MIUI._4.15.2.9.1_APKPure.apk",
+        "fileSize": "4.4 MB",
+        "version": "1.0",
+        "icon": "icons/Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.png"
+    }
 ]
