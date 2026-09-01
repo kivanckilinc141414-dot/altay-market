@@ -1,4 +1,4 @@
-name: Advanced Altay Market Scanner
+name: Ultimate Altay Market Scanner
 
 on:
   release:
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run Advanced App Scanner
+      - name: Run Ultimate App & Icon Scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -38,7 +38,45 @@ jobs:
           
           apps_dict = {}
 
-          # 1. YÖNTEM: GitHub Releases Taraması (Release'e yüklenen APK'lar)
+          # 0. ADIM: Depodaki 'icons' klasörünü derinlemesine tarayıp veritabanı oluşturalım
+          available_icons = {}
+          if os.path.exists("icons"):
+              for root, dirs, files in os.walk("icons"):
+                  for file in files:
+                      if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg', '.ico')):
+                          rel_path = os.path.join(root, file).replace("\\", "/")
+                          # Dosya adını uzantısız ve küçük harfli al (örn: 'f-droid.png' -> 'f-droid')
+                          base_name = os.path.splitext(file)[0].lower()
+                          available_icons[base_name] = rel_path
+                          
+                          # Özel karakterlerden arındırılmış halini de ekle (örn: 'fdroid')
+                          clean_base = re.sub(r'[^a-z0-9]', '', base_name)
+                          available_icons[clean_base] = rel_path
+
+          print(f"Bulunan toplam ikon sayısı: {len(available_icons)}")
+
+          def find_best_icon(identifier):
+              """Uygulama adına veya dosya adına göre en uygun ikonu bulan akıllı eşleştirici"""
+              if not identifier:
+                  return ""
+              
+              clean_id = identifier.lower().replace('.apk', '')
+              super_clean_id = re.sub(r'[^a-z0-9]', '', clean_id)
+              
+              # 1. Tam eşleşme kontrolü
+              if clean_id in available_icons:
+                  return available_icons[clean_id]
+              if super_clean_id in available_icons:
+                  return available_icons[super_clean_id]
+              
+              # 2. İçeriyor mu kontrolü (Substring / Fuzzy match)
+              for key, path in available_icons.items():
+                  if key in super_clean_id or super_clean_id in key:
+                      return path
+                      
+              return ""
+
+          # 1. YÖNTEM: GitHub Releases Taraması
           url = f"https://api.github.com/repos/{repo}/releases"
           req = urllib.request.Request(url, headers={
               "Authorization": f"Bearer {token}",
@@ -52,7 +90,6 @@ jobs:
                       tag_name = release.get('tag_name', '').strip()
                       release_name = release.get('name', '').strip()
                       
-                      # Sürüm numarasını tag'den temizleyip al (örn: v1.2.1 -> 1.2.1)
                       version = tag_name.lstrip('vV') if tag_name else "1.0"
                       
                       for asset in release.get('assets', []):
@@ -68,11 +105,8 @@ jobs:
                               
                               app_name = release_name if release_name and release_name != tag_name else asset_name.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
                               
-                              # İkon kontrolü (icons/ klasöründe dosya adıyla eşleşen png var mı?)
-                              clean_id = asset_name.replace('.apk', '').lower()
-                              icon_path = f"icons/{clean_id}.png"
-                              if not os.path.exists(icon_path):
-                                  icon_path = "" # Bulunamazsa boş bırakılır, index.html varsayılanı basar
+                              # Gelişmiş ikon bulucu çağrısı
+                              icon_path = find_best_icon(asset_name)
 
                               apps_dict[asset_name] = {
                                   "name": app_name,
@@ -85,7 +119,7 @@ jobs:
           except Exception as e:
               print(f"Releases taranırken uyarı/hata: {e}")
 
-          # 2. YÖNTEM: Repo İçi Dosya Taraması (Doğrudan klasöre atılan APK'lar için yedek tarama)
+          # 2. YÖNTEM: Repo İçi Dosya Taraması (Yedek)
           for root, dirs, files in os.walk("."):
               if ".git" in root or "icons" in root:
                   continue
@@ -99,17 +133,13 @@ jobs:
                     else:
                         file_size = f"{size_bytes / 1024:.1f} KB"
                     
-                    # Dosya adından versiyon yakalamaya çalış (Örn: newpipe_v1.2.apk -> 1.2)
                     version_match = re.search(r'[vV]?(\d+\.\d+(\.\d+)?)', file)
                     version = version_match.group(1) if version_match else "1.0"
                     
                     app_name = file.replace('.apk', '').replace('_', ' ').replace('-', ' ').title()
                     download_url = f"https://raw.githubusercontent.com/{repo}/main/{file}"
                     
-                    clean_id = file.replace('.apk', '').lower()
-                    icon_path = f"icons/{clean_id}.png"
-                    if not os.path.exists(icon_path):
-                        icon_path = ""
+                    icon_path = find_best_icon(file)
 
                     apps_dict[file] = {
                         "name": app_name,
@@ -121,8 +151,10 @@ jobs:
                     }
 
           apps_list = list(apps_dict.values())
+          
           with open('apps.json', 'w', encoding='utf-8') as f:
-              json.dump(apps_list, f, ensure_export=False, indent=4)
+              json.dump(apps_list, f, ensure_ascii=False, indent=4)
+              
           print(f"Toplam {len(apps_list)} uygulama başarıyla taranıp apps.json dosyasına işlendi.")
           EOF
 
@@ -131,4 +163,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.github.com"
           git add apps.json
-          git diff --staged --quiet || (git commit -m "Auto-scan: update apps.json with accurate versions and sizes" && git push)
+          git diff --staged --quiet || (git commit -m "Auto-scan: ultimate version and robust icon matching update" && git push)
