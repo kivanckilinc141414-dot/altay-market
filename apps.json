@@ -28,20 +28,6 @@
         "icon": ""
     },
     {
-        "name": "Lite",
-        "fileName": "Facebook+Lite_525.0.0.5.102_APKPure.apk",
-        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Facebook%2BLite_525.0.0.5.102_APKPure.apk",
-        "fileSize": "3.3 MB",
-        "icon": "icons/Facebook+Lite_525.0.0.5.102_APKPure.png"
-    },
-    {
-        "name": "Instagram Lite",
-        "fileName": "Instagram+Lite_525.0.0.5.102_APKPure.apk",
-        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Instagram%2BLite_525.0.0.5.102_APKPure.apk",
-        "fileSize": "3.6 MB",
-        "icon": "icons/Instagram+Lite_525.0.0.5.102_APKPure.png"
-    },
-    {
         "name": "NewPipe",
         "fileName": "NewPipe_0.29.1_APKPure.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/NewPipe_0.29.1_APKPure.apk",
@@ -49,24 +35,10 @@
         "icon": ""
     },
     {
-        "name": "Spotify",
-        "fileName": "Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.apk",
-        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Spotify_%2BMusic%2Band%2BPodcasts_9.1.76.2055_APKPure.apk",
-        "fileSize": "139.2 MB",
-        "icon": "icons/Spotify_+Music+and+Podcasts_9.1.76.2055_APKPure.png"
-    },
-    {
         "name": "Uptodown App Store",
         "fileName": "uptodown.apk",
         "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/uptodown.apk",
         "fileSize": "14.6 MB",
         "icon": "icons/uptodown.png"
-    },
-    {
-        "name": "Ekran kaydedici",
-        "fileName": "Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.apk",
-        "downloadUrl": "https://github.com/kivanckilinc141414-dot/altay-market/releases/download/v1.0/Xiaomi%2BScreen%2BRecorder%2B.MIUI._4.15.2.9.1_APKPure.apk",
-        "fileSize": "4.4 MB",
-        "icon": "icons/Xiaomi+Screen+Recorder+.MIUI._4.15.2.9.1_APKPure.png"
     }
 ]
